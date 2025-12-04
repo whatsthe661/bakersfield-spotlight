@@ -1,32 +1,41 @@
-import { NominationPayload } from '@/types/nomination';
+import { NominationPayload, NominationResponse } from '@/types/nomination';
 
 /**
- * Submit a nomination to the backend.
+ * Submit a nomination to the backend API.
  * 
- * TODO: Hook this up to backend endpoint that:
- * - Emails the show runner with nomination details
- * - Pushes data into Google Sheets / database
- * - Sends confirmation email to nominator
- * - Optionally notifies the business if requested
+ * This calls the Vercel serverless function at /api/nominate which:
+ * - Validates the nomination data
+ * - Sends an email to the show runner with nomination details
+ * - Sends a confirmation email to the nominator
  * 
- * Expected endpoint: POST /api/nominate
+ * @param data - The nomination form data
+ * @returns Promise with success status and optional error message
  */
-export async function submitNomination(data: NominationPayload): Promise<{ success: boolean; message: string }> {
-  // Simulate API call with delay
-  await new Promise(resolve => setTimeout(resolve, 2000));
-  
-  // TODO: Replace with actual API call
-  // const response = await fetch('/api/nominate', {
-  //   method: 'POST',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify(data),
-  // });
-  // return response.json();
+export async function submitNomination(data: NominationPayload): Promise<NominationResponse> {
+  try {
+    const response = await fetch('/api/nominate', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
 
-  console.log('Nomination submitted:', data);
-  
-  return {
-    success: true,
-    message: 'Nomination received successfully',
-  };
+    const result: NominationResponse = await response.json();
+    
+    if (!response.ok) {
+      return {
+        success: false,
+        error: result.error || `Server error: ${response.status}`,
+      };
+    }
+
+    return result;
+  } catch (error) {
+    console.error('Network error submitting nomination:', error);
+    return {
+      success: false,
+      error: 'Unable to connect. Please check your internet connection and try again.',
+    };
+  }
 }

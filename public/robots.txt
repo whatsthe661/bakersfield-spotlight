@@ -1,14 +1,8 @@
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: Twitterbot
-Allow: /
-
-User-agent: facebookexternalhit
-Allow: /
+# What's the 661 - robots.txt
+# https://whatsthe661.com
 
 User-agent: *
 Allow: /
+
+# Sitemap
+Sitemap: https://whatsthe661.com/sitemap.xml

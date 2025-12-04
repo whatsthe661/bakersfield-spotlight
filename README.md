@@ -1,73 +1,193 @@
-# Welcome to your Lovable project
+# What's the 661
 
-## Project info
+**Built in Bakersfield.** A cinematic docu-series spotlighting the people and places that built this city.
 
-**URL**: https://lovable.dev/projects/9982809f-b7ba-432d-abb1-2a7639b4a6fe
+🌐 **Website**: https://whatsthe661.com
 
-## How can I edit this code?
+---
 
-There are several ways of editing your application.
+## Tech Stack
 
-**Use Lovable**
+- **Frontend**: React 18 + TypeScript + Vite
+- **Styling**: Tailwind CSS + shadcn/ui components
+- **Animations**: Framer Motion
+- **Backend**: Vercel Serverless Functions
+- **Email**: Resend (swappable provider architecture)
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/9982809f-b7ba-432d-abb1-2a7639b4a6fe) and start prompting.
+---
 
-Changes made via Lovable will be committed automatically to this repo.
+## Getting Started
 
-**Use your preferred IDE**
+### Prerequisites
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+- Node.js 18+ (recommend using [nvm](https://github.com/nvm-sh/nvm))
+- npm or bun
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### Installation
 
-Follow these steps:
+```bash
+# Clone the repository
+git clone https://github.com/your-org/bakersfield-spotlight.git
+cd bakersfield-spotlight
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+# Install dependencies
+npm install
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+# Copy environment variables
+cp .env.example .env.local
+# Edit .env.local with your values (see Environment Variables below)
 
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Start the development server
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+The site will be available at `http://localhost:8080`
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+---
 
-**Use GitHub Codespaces**
+## Environment Variables
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+Copy `.env.example` to `.env.local` and configure:
 
-## What technologies are used for this project?
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `SITE_URL` | Production URL (e.g., `https://whatsthe661.com`) | No (has default) |
+| `SITE_NAME` | Site name for emails | No (has default) |
+| `RESEND_API_KEY` | API key from [Resend](https://resend.com) | **Yes** (for email) |
+| `EMAIL_TO_SHOW_RUNNER` | Email to receive nomination notifications | No (has default) |
+| `EMAIL_FROM` | Verified sender email in Resend | No (has default) |
 
-This project is built with:
+### Setting up Resend
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+1. Create an account at [resend.com](https://resend.com)
+2. Add and verify your domain (`whatsthe661.com`)
+3. Generate an API key and add it to `.env.local`
 
-## How can I deploy this project?
+---
 
-Simply open [Lovable](https://lovable.dev/projects/9982809f-b7ba-432d-abb1-2a7639b4a6fe) and click on Share -> Publish.
+## Project Structure
 
-## Can I connect a custom domain to my Lovable project?
+```
+├── api/                    # Vercel serverless functions
+│   ├── _lib/
+│   │   ├── config.ts       # Server-side config (env vars)
+│   │   └── email.ts        # Email sending utility (Resend)
+│   └── nominate.ts         # POST /api/nominate endpoint
+│
+├── public/                 # Static assets
+│   ├── favicon.ico
+│   └── og-image.jpg        # Social media preview image
+│
+├── src/
+│   ├── components/         # React components
+│   │   ├── Footer.tsx
+│   │   ├── FormInput.tsx
+│   │   ├── HeroBackground.tsx
+│   │   ├── HeroContent.tsx
+│   │   ├── NominationForm.tsx
+│   │   ├── SuccessState.tsx
+│   │   └── ui/             # shadcn/ui components
+│   │
+│   ├── lib/
+│   │   ├── api.ts          # Frontend API client
+│   │   └── utils.ts        # Utility functions
+│   │
+│   ├── pages/
+│   │   ├── Index.tsx       # Main landing page
+│   │   └── NotFound.tsx    # 404 page
+│   │
+│   ├── types/
+│   │   └── nomination.ts   # Shared TypeScript interfaces
+│   │
+│   └── index.css           # Global styles + Tailwind
+│
+├── index.html              # HTML template with meta tags
+└── vite.config.ts          # Vite configuration
+```
 
-Yes, you can!
+---
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## Key Features
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+### Nomination Flow
+
+1. User clicks "Nominate a Business"
+2. Multi-step form collects nomination details
+3. On submit, `POST /api/nominate` is called
+4. Server validates data and sends emails:
+   - Notification email to show runner
+   - Confirmation email to nominator
+5. User sees success state with social links
+
+### Email Provider Architecture
+
+The email system is designed for easy provider swapping:
+
+```typescript
+// api/_lib/email.ts
+interface EmailProvider {
+  send(params: SendEmailParams): Promise<EmailResult>;
+}
+
+// To add a new provider:
+// 1. Implement the EmailProvider interface
+// 2. Update getEmailProvider() in email.ts
+```
+
+Currently implemented:
+- **ResendProvider**: Production email via Resend API
+- **ConsoleProvider**: Development fallback (logs to console)
+
+---
+
+## Deployment
+
+This project is designed for Vercel deployment:
+
+```bash
+# Install Vercel CLI
+npm i -g vercel
+
+# Deploy
+vercel
+```
+
+### Environment Variables on Vercel
+
+Add these in Vercel Dashboard → Settings → Environment Variables:
+
+- `RESEND_API_KEY` (required)
+- `EMAIL_TO_SHOW_RUNNER` (optional, has default)
+- `EMAIL_FROM` (optional, has default)
+
+---
+
+## Available Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start development server |
+| `npm run build` | Build for production |
+| `npm run preview` | Preview production build |
+| `npm run lint` | Run ESLint |
+
+---
+
+## Contributing
+
+1. Create a feature branch
+2. Make your changes
+3. Test locally
+4. Submit a PR
+
+---
+
+## License
+
+© 2024 Vetra. All rights reserved.
+
+---
+
+## Contact
+
+📧 contact@whatsthe661.com
