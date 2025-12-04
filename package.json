@@ -4,6 +4,9 @@
   "version": "1.0.0",
   "type": "module",
   "description": "What's the 661 - A cinematic docu-series spotlighting the people and places that built Bakersfield",
+  "engines": {
+    "node": "20.x"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
