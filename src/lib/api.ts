@@ -40,12 +40,14 @@ Submitted via whatsthe661.com
 
       // Open mailto link
       const mailtoLink = `mailto:${to}?subject=${subject}&body=${body}`;
-      window.location.href = mailtoLink;
       
-      // Return success after a short delay to show the success state
+      // Use a small delay to ensure state updates before navigation
       setTimeout(() => {
-        resolve({ success: true });
-      }, 500);
+        window.location.href = mailtoLink;
+      }, 100);
+      
+      // Return success immediately so UI updates
+      resolve({ success: true });
       
     } catch (error) {
       console.error('Error creating mailto link:', error);

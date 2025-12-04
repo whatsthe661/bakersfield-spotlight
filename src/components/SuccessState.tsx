@@ -1,5 +1,5 @@
 import { motion, useReducedMotion } from 'framer-motion';
-import { Check, Instagram, Youtube, Mail } from 'lucide-react';
+import { Check, Instagram, Youtube, Mail, Send } from 'lucide-react';
 
 // TikTok icon component since lucide doesn't have it
 const TikTokIcon = () => (
@@ -23,19 +23,19 @@ export function SuccessState() {
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: prefersReducedMotion ? 1 : 0.98 }}
+      initial={{ opacity: 0, scale: prefersReducedMotion ? 1 : 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: prefersReducedMotion ? 0 : 0.4, ease: easeOut }}
-      className="text-center py-4"
+      transition={{ duration: prefersReducedMotion ? 0 : 0.5, ease: easeOut }}
+      className="text-center py-6"
     >
-      {/* Checkmark Animation */}
+      {/* Animated Icon */}
       <motion.div
-        initial={{ scale: prefersReducedMotion ? 1 : 0, opacity: prefersReducedMotion ? 1 : 0 }}
-        animate={{ scale: 1, opacity: 1 }}
+        initial={{ scale: prefersReducedMotion ? 1 : 0, rotate: prefersReducedMotion ? 0 : -180 }}
+        animate={{ scale: 1, rotate: 0 }}
         transition={{ 
-          delay: prefersReducedMotion ? 0 : 0.15, 
-          type: prefersReducedMotion ? 'tween' : 'spring', 
-          stiffness: 180, 
+          delay: prefersReducedMotion ? 0 : 0.1, 
+          type: 'spring', 
+          stiffness: 200, 
           damping: 15 
         }}
         className="w-20 h-20 mx-auto mb-6 rounded-full bg-primary/15 flex items-center justify-center"
@@ -44,47 +44,56 @@ export function SuccessState() {
           initial={{ scale: prefersReducedMotion ? 1 : 0 }}
           animate={{ scale: 1 }}
           transition={{ 
-            delay: prefersReducedMotion ? 0 : 0.3, 
-            type: prefersReducedMotion ? 'tween' : 'spring', 
-            stiffness: 200, 
-            damping: 14 
+            delay: prefersReducedMotion ? 0 : 0.25, 
+            type: 'spring', 
+            stiffness: 250, 
+            damping: 12 
           }}
           className="w-14 h-14 rounded-full bg-primary flex items-center justify-center"
         >
           <motion.div
-            initial={{ pathLength: 0, opacity: 0 }}
-            animate={{ pathLength: 1, opacity: 1 }}
-            transition={{ delay: prefersReducedMotion ? 0 : 0.45, duration: prefersReducedMotion ? 0 : 0.3, ease: easeOut }}
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: prefersReducedMotion ? 0 : 0.4, duration: 0.3 }}
           >
-            <Check className="w-8 h-8 text-primary-foreground" strokeWidth={3} />
+            <Send className="w-7 h-7 text-primary-foreground" strokeWidth={2.5} />
           </motion.div>
         </motion.div>
       </motion.div>
 
       {/* Thank You Message */}
       <motion.h3
-        initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 10 }}
+        initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 15 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: prefersReducedMotion ? 0 : 0.5, duration: prefersReducedMotion ? 0 : 0.5, ease: easeOut }}
-        className="font-display text-3xl text-golden mb-3"
+        transition={{ delay: prefersReducedMotion ? 0 : 0.45, duration: 0.5, ease: easeOut }}
+        className="font-display text-3xl sm:text-4xl text-golden mb-4"
       >
-        Thank You
+        Almost There!
       </motion.h3>
       
       <motion.p
         initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: prefersReducedMotion ? 0 : 0.6, duration: prefersReducedMotion ? 0 : 0.5, ease: easeOut }}
-        className="text-foreground/70 mb-8 leading-relaxed max-w-sm mx-auto"
+        transition={{ delay: prefersReducedMotion ? 0 : 0.55, duration: 0.5, ease: easeOut }}
+        className="text-foreground/80 mb-3 leading-relaxed max-w-sm mx-auto text-lg"
       >
-        Your nomination has been received. We'll review it and reach out if this business is selected for the series.
+        Your email app should have opened with your nomination details.
+      </motion.p>
+
+      <motion.p
+        initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: prefersReducedMotion ? 0 : 0.65, duration: 0.5, ease: easeOut }}
+        className="text-foreground/50 mb-8 leading-relaxed max-w-sm mx-auto text-sm"
+      >
+        Just hit send, and we'll take it from there!
       </motion.p>
 
       {/* Social Links */}
       <motion.div
-        initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 10 }}
+        initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 15 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: prefersReducedMotion ? 0 : 0.7, duration: prefersReducedMotion ? 0 : 0.5, ease: easeOut }}
+        transition={{ delay: prefersReducedMotion ? 0 : 0.75, duration: 0.5, ease: easeOut }}
       >
         <p className="text-muted-foreground text-sm mb-4">Follow the journey:</p>
         <div className="flex justify-center gap-3">
@@ -96,14 +105,15 @@ export function SuccessState() {
               rel={href.startsWith('mailto') ? undefined : 'noopener noreferrer'}
               aria-label={label}
               className="w-12 h-12 rounded-full bg-muted/40 flex items-center justify-center text-foreground/50 hover:text-primary hover:bg-primary/10 transition-all duration-200"
-              initial={{ opacity: 0, scale: prefersReducedMotion ? 1 : 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
+              initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 10 }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ 
-                delay: prefersReducedMotion ? 0 : 0.75 + index * 0.05, 
-                duration: prefersReducedMotion ? 0 : 0.3 
+                delay: prefersReducedMotion ? 0 : 0.85 + index * 0.08, 
+                duration: 0.4,
+                ease: easeOut
               }}
-              whileHover={prefersReducedMotion ? {} : { scale: 1.1, y: -2 }}
-              whileTap={prefersReducedMotion ? {} : { scale: 0.95 }}
+              whileHover={prefersReducedMotion ? {} : { scale: 1.15, y: -3 }}
+              whileTap={prefersReducedMotion ? {} : { scale: 0.92 }}
             >
               <Icon />
             </motion.a>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import { X, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { NominationPayload, FormStep, FORM_STEPS, initialFormData } from '@/types/nomination';
 import { submitNomination } from '@/lib/api';
 import { FormInput } from './FormInput';
@@ -14,7 +14,6 @@ interface NominationFormProps {
 export function NominationForm({ isOpen, onClose }: NominationFormProps) {
   const [step, setStep] = useState<FormStep>(1);
   const [formData, setFormData] = useState<NominationPayload>(initialFormData);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [errors, setErrors] = useState<Partial<Record<keyof NominationPayload, string>>>({});
@@ -68,7 +67,6 @@ export function NominationForm({ isOpen, onClose }: NominationFormProps) {
   const handleSubmit = async () => {
     if (!validateStep()) return;
     
-    setIsSubmitting(true);
     setSubmitError(null);
     
     try {
@@ -81,8 +79,6 @@ export function NominationForm({ isOpen, onClose }: NominationFormProps) {
     } catch (error) {
       console.error('Submission error:', error);
       setSubmitError('Unable to submit nomination. Please try again.');
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -102,7 +98,7 @@ export function NominationForm({ isOpen, onClose }: NominationFormProps) {
 
   const slideVariants = {
     enter: (direction: number) => ({
-      x: prefersReducedMotion ? 0 : (direction > 0 ? 40 : -40),
+      x: prefersReducedMotion ? 0 : (direction > 0 ? 50 : -50),
       opacity: 0,
     }),
     center: {
@@ -110,7 +106,7 @@ export function NominationForm({ isOpen, onClose }: NominationFormProps) {
       opacity: 1,
     },
     exit: (direction: number) => ({
-      x: prefersReducedMotion ? 0 : (direction < 0 ? 40 : -40),
+      x: prefersReducedMotion ? 0 : (direction < 0 ? 50 : -50),
       opacity: 0,
     }),
   };
@@ -119,20 +115,26 @@ export function NominationForm({ isOpen, onClose }: NominationFormProps) {
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          initial={{ opacity: 0, scale: prefersReducedMotion ? 1 : 0.95, y: prefersReducedMotion ? 0 : 10 }}
+          initial={{ opacity: 0, scale: prefersReducedMotion ? 1 : 0.92, y: prefersReducedMotion ? 0 : 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: prefersReducedMotion ? 1 : 0.95, y: prefersReducedMotion ? 0 : 10 }}
-          transition={{ duration: prefersReducedMotion ? 0 : 0.35, ease: easeOut }}
+          exit={{ opacity: 0, scale: prefersReducedMotion ? 1 : 0.92, y: prefersReducedMotion ? 0 : 20 }}
+          transition={{ duration: prefersReducedMotion ? 0 : 0.4, ease: easeOut }}
           className="relative z-20 w-full max-w-md mx-auto px-4"
         >
-          <div className="glass-card rounded-2xl p-6 sm:p-8 shadow-2xl">
+          <motion.div 
+            className="glass-card rounded-2xl p-6 sm:p-8 shadow-2xl"
+            initial={{ boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}
+            animate={{ boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.4)' }}
+            transition={{ duration: 0.5 }}
+          >
             {/* Close Button */}
             <motion.button
               onClick={handleClose}
-              className="absolute top-4 right-4 text-foreground/60 hover:text-foreground transition-colors p-1 rounded-full hover:bg-foreground/5"
+              className="absolute top-4 right-4 text-foreground/60 hover:text-foreground transition-colors p-2 rounded-full hover:bg-foreground/5"
               aria-label="Close form"
-              whileHover={prefersReducedMotion ? {} : { scale: 1.1 }}
-              whileTap={prefersReducedMotion ? {} : { scale: 0.95 }}
+              whileHover={prefersReducedMotion ? {} : { scale: 1.1, rotate: 90 }}
+              whileTap={prefersReducedMotion ? {} : { scale: 0.9 }}
+              transition={{ duration: 0.2 }}
             >
               <X size={22} />
             </motion.button>
@@ -142,23 +144,29 @@ export function NominationForm({ isOpen, onClose }: NominationFormProps) {
             ) : (
               <>
                 {/* Header */}
-                <div className="mb-6">
+                <motion.div 
+                  className="mb-6"
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1, duration: 0.4 }}
+                >
                   <h2 className="font-display text-3xl text-golden mb-2">Nominate a Business</h2>
                   <p className="text-muted-foreground text-sm">Step {step} of 4 — {FORM_STEPS[step - 1].title}</p>
-                </div>
+                </motion.div>
 
                 {/* Progress Bar */}
                 <div className="flex gap-2 mb-8">
                   {[1, 2, 3, 4].map((s) => (
                     <motion.div
                       key={s}
-                      className="h-1 flex-1 rounded-full bg-border overflow-hidden"
+                      className="h-1.5 flex-1 rounded-full bg-border overflow-hidden"
+                      whileHover={prefersReducedMotion ? {} : { scale: 1.05 }}
                     >
                       <motion.div
-                        className="h-full bg-primary"
-                        initial={{ width: s <= step ? '100%' : '0%' }}
+                        className="h-full bg-primary rounded-full"
+                        initial={{ width: '0%' }}
                         animate={{ width: s <= step ? '100%' : '0%' }}
-                        transition={{ duration: prefersReducedMotion ? 0 : 0.4, ease: easeOut }}
+                        transition={{ duration: prefersReducedMotion ? 0 : 0.5, ease: easeOut }}
                       />
                     </motion.div>
                   ))}
@@ -168,9 +176,10 @@ export function NominationForm({ isOpen, onClose }: NominationFormProps) {
                 <AnimatePresence>
                   {submitError && (
                     <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
+                      initial={{ opacity: 0, height: 0, y: -10 }}
+                      animate={{ opacity: 1, height: 'auto', y: 0 }}
+                      exit={{ opacity: 0, height: 0, y: -10 }}
+                      transition={{ duration: 0.3 }}
                       className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/20"
                     >
                       <p className="text-destructive text-sm">{submitError}</p>
@@ -187,7 +196,7 @@ export function NominationForm({ isOpen, onClose }: NominationFormProps) {
                     initial="enter"
                     animate="center"
                     exit="exit"
-                    transition={{ duration: prefersReducedMotion ? 0 : 0.3, ease: easeOut }}
+                    transition={{ duration: prefersReducedMotion ? 0 : 0.35, ease: easeOut }}
                   >
                     {step === 1 && (
                       <div className="space-y-4">
@@ -247,7 +256,11 @@ export function NominationForm({ isOpen, onClose }: NominationFormProps) {
 
                     {step === 4 && (
                       <div className="space-y-4">
-                        <label className="flex items-center gap-3 cursor-pointer group">
+                        <motion.label 
+                          className="flex items-center gap-3 cursor-pointer group p-3 rounded-lg hover:bg-foreground/5 transition-colors"
+                          whileHover={prefersReducedMotion ? {} : { x: 3 }}
+                          whileTap={prefersReducedMotion ? {} : { scale: 0.99 }}
+                        >
                           <input
                             type="checkbox"
                             checked={formData.notifyBusiness}
@@ -257,15 +270,15 @@ export function NominationForm({ isOpen, onClose }: NominationFormProps) {
                           <span className="text-foreground group-hover:text-primary transition-colors">
                             Notify this business about the nomination
                           </span>
-                        </label>
+                        </motion.label>
                         
                         <AnimatePresence>
                           {formData.notifyBusiness && (
                             <motion.div
-                              initial={{ opacity: 0, height: 0 }}
-                              animate={{ opacity: 1, height: 'auto' }}
-                              exit={{ opacity: 0, height: 0 }}
-                              transition={{ duration: prefersReducedMotion ? 0 : 0.25, ease: easeOut }}
+                              initial={{ opacity: 0, height: 0, y: -10 }}
+                              animate={{ opacity: 1, height: 'auto', y: 0 }}
+                              exit={{ opacity: 0, height: 0, y: -10 }}
+                              transition={{ duration: prefersReducedMotion ? 0 : 0.3, ease: easeOut }}
                             >
                               <FormInput
                                 label="Business Contact (email or phone)"
@@ -286,9 +299,9 @@ export function NominationForm({ isOpen, onClose }: NominationFormProps) {
                   <motion.button
                     onClick={handleBack}
                     disabled={step === 1}
-                    className="flex items-center gap-1 text-muted-foreground hover:text-foreground disabled:opacity-0 disabled:pointer-events-none transition-all"
-                    whileHover={prefersReducedMotion || step === 1 ? {} : { x: -2 }}
-                    whileTap={prefersReducedMotion || step === 1 ? {} : { scale: 0.98 }}
+                    className="flex items-center gap-1 text-muted-foreground hover:text-foreground disabled:opacity-0 disabled:pointer-events-none transition-all px-3 py-2 rounded-lg hover:bg-foreground/5"
+                    whileHover={prefersReducedMotion || step === 1 ? {} : { x: -3 }}
+                    whileTap={prefersReducedMotion || step === 1 ? {} : { scale: 0.97 }}
                   >
                     <ChevronLeft size={20} />
                     Back
@@ -297,9 +310,9 @@ export function NominationForm({ isOpen, onClose }: NominationFormProps) {
                   {step < 4 ? (
                     <motion.button
                       onClick={handleNext}
-                      className="flex items-center gap-1 golden-button px-6 py-2.5 rounded-full text-primary-foreground font-medium transition-all"
-                      whileHover={prefersReducedMotion ? {} : { scale: 1.02 }}
-                      whileTap={prefersReducedMotion ? {} : { scale: 0.98 }}
+                      className="flex items-center gap-1 golden-button px-6 py-2.5 rounded-full text-primary-foreground font-medium"
+                      whileHover={prefersReducedMotion ? {} : { scale: 1.03, x: 2 }}
+                      whileTap={prefersReducedMotion ? {} : { scale: 0.97 }}
                     >
                       Next
                       <ChevronRight size={20} />
@@ -307,25 +320,17 @@ export function NominationForm({ isOpen, onClose }: NominationFormProps) {
                   ) : (
                     <motion.button
                       onClick={handleSubmit}
-                      disabled={isSubmitting}
-                      className="flex items-center gap-2 golden-button px-6 py-2.5 rounded-full text-primary-foreground font-medium transition-all disabled:opacity-70 disabled:cursor-not-allowed"
-                      whileHover={prefersReducedMotion || isSubmitting ? {} : { scale: 1.02 }}
-                      whileTap={prefersReducedMotion || isSubmitting ? {} : { scale: 0.98 }}
+                      className="flex items-center gap-2 golden-button px-6 py-2.5 rounded-full text-primary-foreground font-medium"
+                      whileHover={prefersReducedMotion ? {} : { scale: 1.03 }}
+                      whileTap={prefersReducedMotion ? {} : { scale: 0.97 }}
                     >
-                      {isSubmitting ? (
-                        <>
-                          <Loader2 size={18} className="animate-spin" />
-                          Sending...
-                        </>
-                      ) : (
-                        'Submit Nomination'
-                      )}
+                      Submit Nomination
                     </motion.button>
                   )}
                 </div>
               </>
             )}
-          </div>
+          </motion.div>
         </motion.div>
       )}
     </AnimatePresence>

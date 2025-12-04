@@ -41,8 +41,8 @@ export function HeroContent({ onNominateClick }: HeroContentProps) {
 
       {/* Main Title - Very Large */}
       <motion.h1
-        initial={{ opacity: 0, y: 25 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={{ opacity: 0, y: 30, scale: 0.95 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={getTransition(0.4)}
         className="font-display text-6xl sm:text-7xl md:text-8xl lg:text-9xl xl:text-[10rem] text-golden tracking-wide leading-none"
       >
@@ -66,25 +66,28 @@ export function HeroContent({ onNominateClick }: HeroContentProps) {
         transition={getTransition(0.7)}
         className="text-foreground/60 text-base sm:text-lg md:text-xl font-body font-light max-w-2xl mx-auto mb-12 leading-relaxed"
       >
-        A docu-series spotlighting the people and places that built this city.
+        A series spotlighting the people and places that built this city.
       </motion.p>
 
-      {/* CTA Button */}
+      {/* CTA Button with glow animation */}
       <motion.button
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ 
+          opacity: 1, 
+          scale: 1,
+        }}
         transition={{
           ...getTransition(0.85),
           scale: { type: 'spring', stiffness: 200, damping: 20, delay: prefersReducedMotion ? 0 : 0.85 }
         }}
         onClick={onNominateClick}
-        className="golden-button px-10 py-4 rounded-full text-primary-foreground font-body font-semibold text-lg tracking-wide transition-all duration-300 hover:shadow-[0_8px_40px_hsl(38_85%_55%/0.45)] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background"
+        className="golden-button px-10 py-4 rounded-full text-primary-foreground font-body font-semibold text-lg tracking-wide transition-all duration-300 hover:shadow-[0_8px_40px_hsl(38_85%_55%/0.5)] active:shadow-[0_4px_20px_hsl(38_85%_55%/0.4)] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background"
         whileHover={prefersReducedMotion ? {} : { 
-          scale: 1.03,
-          transition: { duration: 0.2, ease: 'easeOut' }
+          scale: 1.05,
+          transition: { duration: 0.25, ease: 'easeOut' }
         }}
         whileTap={prefersReducedMotion ? {} : { 
-          scale: 0.98,
+          scale: 0.97,
           transition: { duration: 0.1 }
         }}
       >
