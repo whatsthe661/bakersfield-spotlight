@@ -44,7 +44,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Check environment variables
   const RESEND_API_KEY = process.env.RESEND_API_KEY;
-  const EMAIL_FROM = process.env.EMAIL_FROM || 'onboarding@resend.dev';
+  // Use Resend's test sender until domain is verified
+  const EMAIL_FROM = process.env.EMAIL_FROM || 'Whats the 661 <onboarding@resend.dev>';
   const EMAIL_TO = process.env.EMAIL_TO_SHOW_RUNNER || 'whatsthe661@gmail.com';
 
   if (!RESEND_API_KEY) {
@@ -132,10 +133,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
     if (showRunnerError) {
-      console.error('Failed to send show runner email:', showRunnerError);
+      console.error('Failed to send show runner email:', JSON.stringify(showRunnerError));
       return res.status(500).json({ 
         success: false, 
-        error: 'Unable to process your nomination. Please try again later.' 
+        error: 'Unable to process your nomination. Please try again later.',
+        debug: process.env.NODE_ENV !== 'production' ? showRunnerError : undefined
       });
     }
 
