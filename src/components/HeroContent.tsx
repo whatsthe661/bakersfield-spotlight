@@ -1,14 +1,5 @@
 /**
  * HeroContent Component
- * 
- * PROJECT ANALYSIS (as requested):
- * - Framework: Vite + React 18 + TypeScript
- * - Routing: react-router-dom (SPA)
- * - Styling: Tailwind CSS with shadcn/ui components
- * - Animations: Framer Motion (already installed)
- * - Landing page: src/pages/Index.tsx
- * - Form submission: src/lib/api.ts (previously fake, now connected to /api/nominate)
- * - Types: src/types/nomination.ts
  */
 
 import { motion, useReducedMotion } from 'framer-motion';
@@ -32,7 +23,7 @@ export function HeroContent({ onNominateClick }: HeroContentProps) {
 
   return (
     <motion.div
-      className="relative z-10 text-center px-6 max-w-4xl mx-auto"
+      className="relative z-10 text-center px-4 sm:px-6 max-w-5xl mx-auto"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -43,29 +34,29 @@ export function HeroContent({ onNominateClick }: HeroContentProps) {
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
         transition={getTransition(0.2)}
-        className="text-foreground/50 text-xs sm:text-sm tracking-[0.35em] uppercase mb-6 font-body"
+        className="text-foreground/50 text-xs sm:text-sm tracking-[0.35em] uppercase mb-4 font-body"
       >
         Presented by Vetra
       </motion.p>
 
-      {/* Main Title */}
+      {/* Main Title - Very Large */}
       <motion.h1
         initial={{ opacity: 0, y: 25 }}
         animate={{ opacity: 1, y: 0 }}
         transition={getTransition(0.4)}
-        className="font-display text-5xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl text-golden tracking-wide mb-4"
+        className="font-display text-6xl sm:text-7xl md:text-8xl lg:text-9xl xl:text-[10rem] text-golden tracking-wide leading-none"
       >
         WHAT'S THE 661
       </motion.h1>
 
-      {/* Sub-tagline */}
+      {/* Sub-tagline - Fits within title width */}
       <motion.p
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={getTransition(0.55)}
-        className="font-display text-2xl sm:text-3xl md:text-4xl text-foreground/90 tracking-wider mb-6"
+        className="font-display text-xl sm:text-2xl md:text-3xl lg:text-4xl text-foreground/90 tracking-[0.2em] sm:tracking-[0.3em] uppercase mt-2 mb-8"
       >
-        Built in Bakersfield.
+        Built in Bakersfield
       </motion.p>
 
       {/* Description */}
@@ -75,7 +66,7 @@ export function HeroContent({ onNominateClick }: HeroContentProps) {
         transition={getTransition(0.7)}
         className="text-foreground/60 text-base sm:text-lg md:text-xl font-body font-light max-w-2xl mx-auto mb-12 leading-relaxed"
       >
-        A cinematic series spotlighting the people and places that built this city.
+        A docu-series spotlighting the people and places that built this city.
       </motion.p>
 
       {/* CTA Button */}
