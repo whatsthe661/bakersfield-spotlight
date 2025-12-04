@@ -32,11 +32,10 @@ export interface NominationRecord extends NominationPayload {
 }
 
 /**
- * API response for nomination submission
+ * Response from nomination submission
  */
 export interface NominationResponse {
   success: boolean;
-  message?: string;
   error?: string;
 }
 

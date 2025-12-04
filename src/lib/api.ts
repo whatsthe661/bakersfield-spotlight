@@ -1,41 +1,55 @@
-import { NominationPayload, NominationResponse } from '@/types/nomination';
+import { NominationPayload } from '@/types/nomination';
 
 /**
- * Submit a nomination to the backend API.
- * 
- * This calls the Vercel serverless function at /api/nominate which:
- * - Validates the nomination data
- * - Sends an email to the show runner with nomination details
- * - Sends a confirmation email to the nominator
- * 
- * @param data - The nomination form data
- * @returns Promise with success status and optional error message
+ * Creates a mailto link with all nomination details pre-filled
+ * and opens the user's default email client
  */
-export async function submitNomination(data: NominationPayload): Promise<NominationResponse> {
-  try {
-    const response = await fetch('/api/nominate', {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    });
+export function submitNomination(data: NominationPayload): Promise<{ success: boolean; error?: string }> {
+  return new Promise((resolve) => {
+    try {
+      const to = 'contact@whatsthe661.com';
+      const subject = encodeURIComponent(`What's the 661 Nomination: ${data.businessName}`);
+      
+      const body = encodeURIComponent(`
+NEW NOMINATION FOR "WHAT'S THE 661"
+====================================
 
-    const result: NominationResponse = await response.json();
-    
-    if (!response.ok) {
-      return {
-        success: false,
-        error: result.error || `Server error: ${response.status}`,
-      };
+BUSINESS INFORMATION
+--------------------
+Business Name: ${data.businessName}
+Website/Instagram: ${data.businessWebsite || 'Not provided'}
+
+WHY THEY SHOULD BE FEATURED
+---------------------------
+${data.reason}
+
+NOMINATED BY
+------------
+Name: ${data.nominatorName}
+Email: ${data.nominatorEmail}
+Phone: ${data.nominatorPhone || 'Not provided'}
+
+ADDITIONAL
+----------
+Notify the business: ${data.notifyBusiness ? 'Yes' : 'No'}
+${data.notifyBusiness && data.businessContact ? `Business Contact: ${data.businessContact}` : ''}
+
+====================================
+Submitted via whatsthe661.com
+      `.trim());
+
+      // Open mailto link
+      const mailtoLink = `mailto:${to}?subject=${subject}&body=${body}`;
+      window.location.href = mailtoLink;
+      
+      // Return success after a short delay to show the success state
+      setTimeout(() => {
+        resolve({ success: true });
+      }, 500);
+      
+    } catch (error) {
+      console.error('Error creating mailto link:', error);
+      resolve({ success: false, error: 'Unable to open email client.' });
     }
-
-    return result;
-  } catch (error) {
-    console.error('Network error submitting nomination:', error);
-    return {
-      success: false,
-      error: 'Unable to connect. Please check your internet connection and try again.',
-    };
-  }
+  });
 }
