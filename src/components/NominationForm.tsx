@@ -15,6 +15,7 @@ export function NominationForm({ isOpen, onClose }: NominationFormProps) {
   const [step, setStep] = useState<FormStep>(1);
   const [formData, setFormData] = useState<NominationPayload>(initialFormData);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [mailtoLink, setMailtoLink] = useState<string | undefined>(undefined);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [errors, setErrors] = useState<Partial<Record<keyof NominationPayload, string>>>({});
   
@@ -72,6 +73,7 @@ export function NominationForm({ isOpen, onClose }: NominationFormProps) {
     try {
       const result = await submitNomination(formData);
       if (result.success) {
+        setMailtoLink(result.mailtoLink);
         setIsSuccess(true);
       } else {
         setSubmitError(result.error || 'Something went wrong. Please try again.');
@@ -88,6 +90,7 @@ export function NominationForm({ isOpen, onClose }: NominationFormProps) {
       setStep(1);
       setFormData(initialFormData);
       setIsSuccess(false);
+      setMailtoLink(undefined);
       setErrors({});
       setSubmitError(null);
     }, 300);
@@ -140,7 +143,7 @@ export function NominationForm({ isOpen, onClose }: NominationFormProps) {
             </motion.button>
 
             {isSuccess ? (
-              <SuccessState />
+              <SuccessState mailtoLink={mailtoLink} />
             ) : (
               <>
                 {/* Header */}

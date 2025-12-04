@@ -1,7 +1,11 @@
 import { motion, useReducedMotion } from 'framer-motion';
-import { Send } from 'lucide-react';
+import { Send, Mail } from 'lucide-react';
 
-export function SuccessState() {
+interface SuccessStateProps {
+  mailtoLink?: string;
+}
+
+export function SuccessState({ mailtoLink }: SuccessStateProps) {
   const prefersReducedMotion = useReducedMotion();
 
   // Apple-like easing
@@ -12,7 +16,7 @@ export function SuccessState() {
       initial={{ opacity: 0, scale: prefersReducedMotion ? 1 : 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: prefersReducedMotion ? 0 : 0.5, ease: easeOut }}
-      className="text-center py-8"
+      className="text-center py-6"
     >
       {/* Animated Icon */}
       <motion.div
@@ -61,7 +65,7 @@ export function SuccessState() {
         initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: prefersReducedMotion ? 0 : 0.55, duration: 0.5, ease: easeOut }}
-        className="text-foreground/80 mb-3 leading-relaxed max-w-sm mx-auto text-lg"
+        className="text-foreground/80 mb-4 leading-relaxed max-w-sm mx-auto text-lg"
       >
         Your email app should have opened with your nomination details.
       </motion.p>
@@ -70,10 +74,30 @@ export function SuccessState() {
         initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: prefersReducedMotion ? 0 : 0.65, duration: 0.5, ease: easeOut }}
-        className="text-foreground/50 leading-relaxed max-w-sm mx-auto text-sm"
+        className="text-foreground/50 leading-relaxed max-w-sm mx-auto text-sm mb-6"
       >
         Just hit send, and we'll take it from there!
       </motion.p>
+
+      {/* Fallback button if email didn't open */}
+      {mailtoLink && (
+        <motion.div
+          initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: prefersReducedMotion ? 0 : 0.75, duration: 0.5, ease: easeOut }}
+        >
+          <p className="text-foreground/40 text-xs mb-3">Email didn't open?</p>
+          <motion.a
+            href={mailtoLink}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-muted/50 text-foreground/70 hover:text-foreground hover:bg-muted transition-all text-sm font-medium"
+            whileHover={prefersReducedMotion ? {} : { scale: 1.03 }}
+            whileTap={prefersReducedMotion ? {} : { scale: 0.97 }}
+          >
+            <Mail size={16} />
+            Tap to open email
+          </motion.a>
+        </motion.div>
+      )}
     </motion.div>
   );
 }
