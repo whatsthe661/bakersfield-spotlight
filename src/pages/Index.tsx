@@ -1,13 +1,39 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState } from 'react';
+import { AnimatePresence } from 'framer-motion';
+import { HeroBackground } from '@/components/HeroBackground';
+import { HeroContent } from '@/components/HeroContent';
+import { NominationForm } from '@/components/NominationForm';
+import { Footer } from '@/components/Footer';
 
 const Index = () => {
+  const [isFormOpen, setIsFormOpen] = useState(false);
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
+    <main className="relative min-h-screen overflow-hidden">
+      {/* Background with dynamic blur */}
+      <HeroBackground blurAmount={isFormOpen ? 12 : 4} />
+
+      {/* Content Container */}
+      <div className="relative z-10 min-h-screen flex flex-col items-center justify-center">
+        <AnimatePresence mode="wait">
+          {!isFormOpen ? (
+            <HeroContent 
+              key="hero" 
+              onNominateClick={() => setIsFormOpen(true)} 
+            />
+          ) : (
+            <NominationForm 
+              key="form" 
+              isOpen={isFormOpen} 
+              onClose={() => setIsFormOpen(false)} 
+            />
+          )}
+        </AnimatePresence>
       </div>
-    </div>
+
+      {/* Footer */}
+      <Footer />
+    </main>
   );
 };
 
