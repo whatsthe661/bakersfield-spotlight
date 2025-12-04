@@ -1,16 +1,11 @@
 /**
  * Email Utility Module
  * 
- * Handles sending nomination emails using Resend.
- * Designed with an abstraction layer to make swapping providers easy.
- * 
- * To switch providers:
- * 1. Create a new provider implementation (e.g., sendgrid.ts)
- * 2. Implement the EmailProvider interface
- * 3. Update getEmailProvider() to use the new provider
+ * Handles sending nomination emails using Resend SDK.
+ * All configuration is read from environment variables.
  */
 
-import { getConfig } from './config';
+import { Resend } from 'resend';
 
 // ============================================================================
 // Types
@@ -28,107 +23,35 @@ interface NominationRecord {
   createdAt: string;
 }
 
-interface SendEmailParams {
-  to: string;
-  from: string;
-  subject: string;
-  text: string;
-  html: string;
-}
-
-interface EmailResult {
-  success: boolean;
-  error?: string;
-}
-
-interface EmailProvider {
-  send(params: SendEmailParams): Promise<EmailResult>;
-}
-
 interface NominationEmailResult {
   showRunnerEmailSent: boolean;
   nominatorEmailSent: boolean;
+  error?: string;
 }
 
 // ============================================================================
-// Email Providers
+// Environment Validation
 // ============================================================================
 
-/**
- * Resend Email Provider
- * https://resend.com/docs
- */
-class ResendProvider implements EmailProvider {
-  private apiKey: string;
+function getEnvConfig(): { apiKey: string; emailFrom: string; emailTo: string } | null {
+  const apiKey = process.env.RESEND_API_KEY;
+  const emailFrom = process.env.EMAIL_FROM;
+  const emailTo = process.env.EMAIL_TO_SHOW_RUNNER;
 
-  constructor(apiKey: string) {
-    this.apiKey = apiKey;
+  if (!apiKey) {
+    console.error('RESEND_API_KEY is not configured');
+    return null;
+  }
+  if (!emailFrom) {
+    console.error('EMAIL_FROM is not configured');
+    return null;
+  }
+  if (!emailTo) {
+    console.error('EMAIL_TO_SHOW_RUNNER is not configured');
+    return null;
   }
 
-  async send(params: SendEmailParams): Promise<EmailResult> {
-    try {
-      const response = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          from: params.from,
-          to: [params.to],
-          subject: params.subject,
-          text: params.text,
-          html: params.html,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('Resend API error:', response.status, errorData);
-        return { success: false, error: `Resend API error: ${response.status}` };
-      }
-
-      return { success: true };
-    } catch (error) {
-      console.error('Failed to send email via Resend:', error);
-      return { success: false, error: String(error) };
-    }
-  }
-}
-
-/**
- * Console Provider (for development/testing)
- * Logs emails to console instead of sending
- */
-class ConsoleProvider implements EmailProvider {
-  async send(params: SendEmailParams): Promise<EmailResult> {
-    console.log('='.repeat(60));
-    console.log('EMAIL (Console Provider - Development Mode)');
-    console.log('='.repeat(60));
-    console.log('To:', params.to);
-    console.log('From:', params.from);
-    console.log('Subject:', params.subject);
-    console.log('-'.repeat(60));
-    console.log(params.text);
-    console.log('='.repeat(60));
-    return { success: true };
-  }
-}
-
-// ============================================================================
-// Provider Factory
-// ============================================================================
-
-function getEmailProvider(): EmailProvider {
-  const config = getConfig();
-  
-  // Use console provider if no API key is configured (development)
-  if (!config.resendApiKey) {
-    console.warn('No RESEND_API_KEY configured, using console email provider');
-    return new ConsoleProvider();
-  }
-  
-  return new ResendProvider(config.resendApiKey);
+  return { apiKey, emailFrom, emailTo };
 }
 
 // ============================================================================
@@ -315,50 +238,68 @@ function escapeHtml(unsafe: string): string {
 // ============================================================================
 
 /**
- * Send nomination notification emails
+ * Send nomination notification emails using Resend SDK
  * 
  * @param nomination - The nomination record with all details
  * @returns Object indicating which emails were sent successfully
  */
 export async function sendNominationEmails(nomination: NominationRecord): Promise<NominationEmailResult> {
-  const config = getConfig();
-  const provider = getEmailProvider();
+  const config = getEnvConfig();
+  
+  if (!config) {
+    return {
+      showRunnerEmailSent: false,
+      nominatorEmailSent: false,
+      error: 'Email configuration is missing.',
+    };
+  }
+
+  const resend = new Resend(config.apiKey);
   
   const result: NominationEmailResult = {
     showRunnerEmailSent: false,
     nominatorEmailSent: false,
   };
   
-  // Send email to show runner (critical)
-  const showRunnerEmail = createShowRunnerEmail(nomination);
-  const showRunnerResult = await provider.send({
-    to: config.emailToShowRunner,
-    from: config.emailFrom,
-    subject: showRunnerEmail.subject,
-    text: showRunnerEmail.text,
-    html: showRunnerEmail.html,
-  });
-  result.showRunnerEmailSent = showRunnerResult.success;
-  
-  if (!showRunnerResult.success) {
-    console.error('Failed to send show runner email:', showRunnerResult.error);
+  // Send email to show runner (critical - goes to whatsthe661@gmail.com)
+  try {
+    const showRunnerEmail = createShowRunnerEmail(nomination);
+    const { error } = await resend.emails.send({
+      from: config.emailFrom,
+      to: config.emailTo,
+      subject: showRunnerEmail.subject,
+      text: showRunnerEmail.text,
+      html: showRunnerEmail.html,
+    });
+    
+    if (error) {
+      console.error('Failed to send show runner email:', error);
+    } else {
+      result.showRunnerEmailSent = true;
+    }
+  } catch (err) {
+    console.error('Error sending show runner email:', err);
   }
   
   // Send confirmation to nominator (non-critical)
-  const nominatorEmail = createNominatorConfirmationEmail(nomination);
-  const nominatorResult = await provider.send({
-    to: nomination.nominatorEmail,
-    from: config.emailFrom,
-    subject: nominatorEmail.subject,
-    text: nominatorEmail.text,
-    html: nominatorEmail.html,
-  });
-  result.nominatorEmailSent = nominatorResult.success;
-  
-  if (!nominatorResult.success) {
-    console.error('Failed to send nominator confirmation email:', nominatorResult.error);
+  try {
+    const nominatorEmail = createNominatorConfirmationEmail(nomination);
+    const { error } = await resend.emails.send({
+      from: config.emailFrom,
+      to: nomination.nominatorEmail,
+      subject: nominatorEmail.subject,
+      text: nominatorEmail.text,
+      html: nominatorEmail.html,
+    });
+    
+    if (error) {
+      console.error('Failed to send nominator confirmation email:', error);
+    } else {
+      result.nominatorEmailSent = true;
+    }
+  } catch (err) {
+    console.error('Error sending nominator confirmation email:', err);
   }
   
   return result;
 }
-

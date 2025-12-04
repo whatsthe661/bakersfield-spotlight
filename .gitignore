@@ -10,7 +10,12 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
-*.local
+
+# Environment variables (NEVER commit these)
+.env
+.env.*
+!.env.example
+!.env.local.example
 
 # Editor directories and files
 .vscode/*

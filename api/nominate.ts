@@ -7,7 +7,7 @@ import { sendNominationEmails } from './_lib/email';
  * Handles nomination form submissions:
  * 1. Validates required fields
  * 2. Sanitizes input data
- * 3. Sends notification email to show runner
+ * 3. Sends notification email to show runner (whatsthe661@gmail.com)
  * 4. Sends confirmation email to nominator
  * 5. Returns success/error response
  */
@@ -18,8 +18,9 @@ interface NominationPayload {
   nominatorPhone?: string;
   businessName: string;
   businessWebsite?: string;
+  businessWebsiteOrInstagram?: string; // Alternative field name
   reason: string;
-  notifyBusiness: boolean;
+  notifyBusiness?: boolean;
   businessContact?: string;
 }
 
@@ -53,7 +54,7 @@ function validatePayload(body: unknown): { valid: true; data: NominationPayload 
   
   if (!data.nominatorEmail || typeof data.nominatorEmail !== 'string' || !data.nominatorEmail.trim()) {
     errors.push({ field: 'nominatorEmail', message: 'Email is required' });
-  } else if (!validateEmail(data.nominatorEmail)) {
+  } else if (!validateEmail(data.nominatorEmail as string)) {
     errors.push({ field: 'nominatorEmail', message: 'Please enter a valid email address' });
   }
   
@@ -69,6 +70,9 @@ function validatePayload(body: unknown): { valid: true; data: NominationPayload 
     return { valid: false, errors };
   }
   
+  // Accept either businessWebsite or businessWebsiteOrInstagram
+  const website = data.businessWebsite || data.businessWebsiteOrInstagram;
+  
   return {
     valid: true,
     data: {
@@ -76,7 +80,7 @@ function validatePayload(body: unknown): { valid: true; data: NominationPayload 
       nominatorEmail: sanitize(data.nominatorEmail as string).toLowerCase(),
       nominatorPhone: sanitize(data.nominatorPhone as string | undefined),
       businessName: sanitize(data.businessName as string),
-      businessWebsite: sanitize(data.businessWebsite as string | undefined),
+      businessWebsite: sanitize(website as string | undefined),
       reason: sanitize(data.reason as string),
       notifyBusiness: Boolean(data.notifyBusiness),
       businessContact: sanitize(data.businessContact as string | undefined),
@@ -88,6 +92,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Only allow POST
   if (req.method !== 'POST') {
     return res.status(405).json({ success: false, error: 'Method not allowed' });
+  }
+  
+  // Check environment variables
+  const RESEND_API_KEY = process.env.RESEND_API_KEY;
+  const EMAIL_FROM = process.env.EMAIL_FROM;
+  const EMAIL_TO_SHOW_RUNNER = process.env.EMAIL_TO_SHOW_RUNNER;
+  
+  if (!RESEND_API_KEY || !EMAIL_FROM || !EMAIL_TO_SHOW_RUNNER) {
+    console.error('Email configuration is missing. Check environment variables.');
+    return res.status(500).json({ 
+      success: false, 
+      error: 'Email configuration is missing.' 
+    });
   }
   
   // Validate payload
@@ -137,4 +154,3 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   }
 }
-
