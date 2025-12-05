@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { NominationPayload, FormStep, FORM_STEPS, initialFormData } from '@/types/nomination';
 import { submitNomination } from '@/lib/api';
 import { FormInput } from './FormInput';
@@ -14,8 +14,8 @@ interface NominationFormProps {
 export function NominationForm({ isOpen, onClose }: NominationFormProps) {
   const [step, setStep] = useState<FormStep>(1);
   const [formData, setFormData] = useState<NominationPayload>(initialFormData);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [mailtoLink, setMailtoLink] = useState<string | undefined>(undefined);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [errors, setErrors] = useState<Partial<Record<keyof NominationPayload, string>>>({});
   
@@ -68,12 +68,12 @@ export function NominationForm({ isOpen, onClose }: NominationFormProps) {
   const handleSubmit = async () => {
     if (!validateStep()) return;
     
+    setIsSubmitting(true);
     setSubmitError(null);
     
     try {
       const result = await submitNomination(formData);
       if (result.success) {
-        setMailtoLink(result.mailtoLink);
         setIsSuccess(true);
       } else {
         setSubmitError(result.error || 'Something went wrong. Please try again.');
@@ -81,6 +81,8 @@ export function NominationForm({ isOpen, onClose }: NominationFormProps) {
     } catch (error) {
       console.error('Submission error:', error);
       setSubmitError('Unable to submit nomination. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -90,7 +92,7 @@ export function NominationForm({ isOpen, onClose }: NominationFormProps) {
       setStep(1);
       setFormData(initialFormData);
       setIsSuccess(false);
-      setMailtoLink(undefined);
+      setIsSubmitting(false);
       setErrors({});
       setSubmitError(null);
     }, 300);
@@ -143,7 +145,7 @@ export function NominationForm({ isOpen, onClose }: NominationFormProps) {
             </motion.button>
 
             {isSuccess ? (
-              <SuccessState mailtoLink={mailtoLink} />
+              <SuccessState />
             ) : (
               <>
                 {/* Header */}
@@ -323,11 +325,19 @@ export function NominationForm({ isOpen, onClose }: NominationFormProps) {
                   ) : (
                     <motion.button
                       onClick={handleSubmit}
-                      className="flex items-center gap-2 golden-button px-6 py-2.5 rounded-full text-primary-foreground font-medium"
-                      whileHover={prefersReducedMotion ? {} : { scale: 1.03 }}
-                      whileTap={prefersReducedMotion ? {} : { scale: 0.97 }}
+                      disabled={isSubmitting}
+                      className="flex items-center gap-2 golden-button px-6 py-2.5 rounded-full text-primary-foreground font-medium disabled:opacity-70"
+                      whileHover={prefersReducedMotion || isSubmitting ? {} : { scale: 1.03 }}
+                      whileTap={prefersReducedMotion || isSubmitting ? {} : { scale: 0.97 }}
                     >
-                      Submit Nomination
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 size={18} className="animate-spin" />
+                          Sending...
+                        </>
+                      ) : (
+                        'Submit Nomination'
+                      )}
                     </motion.button>
                   )}
                 </div>

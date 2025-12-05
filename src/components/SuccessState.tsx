@@ -1,11 +1,7 @@
 import { motion, useReducedMotion } from 'framer-motion';
-import { Send, Mail } from 'lucide-react';
+import { Check } from 'lucide-react';
 
-interface SuccessStateProps {
-  mailtoLink?: string;
-}
-
-export function SuccessState({ mailtoLink }: SuccessStateProps) {
+export function SuccessState() {
   const prefersReducedMotion = useReducedMotion();
 
   // Apple-like easing
@@ -16,9 +12,9 @@ export function SuccessState({ mailtoLink }: SuccessStateProps) {
       initial={{ opacity: 0, scale: prefersReducedMotion ? 1 : 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: prefersReducedMotion ? 0 : 0.5, ease: easeOut }}
-      className="text-center py-6"
+      className="text-center py-8"
     >
-      {/* Animated Icon */}
+      {/* Animated Checkmark */}
       <motion.div
         initial={{ scale: prefersReducedMotion ? 1 : 0, rotate: prefersReducedMotion ? 0 : -180 }}
         animate={{ scale: 1, rotate: 0 }}
@@ -46,7 +42,7 @@ export function SuccessState({ mailtoLink }: SuccessStateProps) {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: prefersReducedMotion ? 0 : 0.4, duration: 0.3 }}
           >
-            <Send className="w-7 h-7 text-primary-foreground" strokeWidth={2.5} />
+            <Check className="w-8 h-8 text-primary-foreground" strokeWidth={3} />
           </motion.div>
         </motion.div>
       </motion.div>
@@ -58,46 +54,26 @@ export function SuccessState({ mailtoLink }: SuccessStateProps) {
         transition={{ delay: prefersReducedMotion ? 0 : 0.45, duration: 0.5, ease: easeOut }}
         className="font-display text-3xl sm:text-4xl text-golden mb-4"
       >
-        Almost There!
+        Thank You!
       </motion.h3>
       
       <motion.p
         initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: prefersReducedMotion ? 0 : 0.55, duration: 0.5, ease: easeOut }}
-        className="text-foreground/80 mb-4 leading-relaxed max-w-sm mx-auto text-lg"
+        className="text-foreground/80 mb-3 leading-relaxed max-w-sm mx-auto text-lg"
       >
-        Your email app should have opened with your nomination details.
+        Your nomination has been received!
       </motion.p>
 
       <motion.p
         initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: prefersReducedMotion ? 0 : 0.65, duration: 0.5, ease: easeOut }}
-        className="text-foreground/50 leading-relaxed max-w-sm mx-auto text-sm mb-6"
+        className="text-foreground/50 leading-relaxed max-w-sm mx-auto text-sm"
       >
-        Just hit send, and we'll take it from there!
+        We'll review it and reach out if this business is selected for the series.
       </motion.p>
-
-      {/* Fallback button if email didn't open */}
-      {mailtoLink && (
-        <motion.div
-          initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: prefersReducedMotion ? 0 : 0.75, duration: 0.5, ease: easeOut }}
-        >
-          <p className="text-foreground/40 text-xs mb-3">Email didn't open?</p>
-          <motion.a
-            href={mailtoLink}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-muted/50 text-foreground/70 hover:text-foreground hover:bg-muted transition-all text-sm font-medium"
-            whileHover={prefersReducedMotion ? {} : { scale: 1.03 }}
-            whileTap={prefersReducedMotion ? {} : { scale: 0.97 }}
-          >
-            <Mail size={16} />
-            Tap to open email
-          </motion.a>
-        </motion.div>
-      )}
     </motion.div>
   );
 }
