@@ -234,39 +234,83 @@ function buildSlackMessage(data: NominationPayload, insights: NominationAiInsigh
   };
 }
 
+// Parse CloudKit private key from env — handles Vercel's tricky storage
+function parseCloudKitPrivateKey(raw: string): string | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+
+  // Format 1: JSON-wrapped (recommended for Vercel — avoids newline issues)
+  if (trimmed.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(trimmed) as { privateKey?: string };
+      if (parsed.privateKey) return parsed.privateKey.replace(/\\n/g, '\n').trim();
+    } catch {
+      /* fall through */
+    }
+  }
+
+  // Format 2: Full PEM (with headers) — may have literal \n or real newlines
+  if (trimmed.includes('-----BEGIN EC PRIVATE KEY-----')) {
+    const pem = trimmed
+      .replace(/^["']|["']$/g, '')
+      .replace(/\\n/g, '\n')
+      .trim();
+    if (pem.includes('-----BEGIN') && pem.includes('-----END')) return pem;
+  }
+
+  // Format 3: Base64-encoded entire PEM (common when pasting into Vercel)
+  if (/^[A-Za-z0-9+/=]+$/.test(trimmed) && trimmed.length > 100) {
+    try {
+      const decoded = Buffer.from(trimmed, 'base64').toString('utf8');
+      if (decoded.includes('-----BEGIN') && decoded.includes('-----END')) {
+        return decoded.trim();
+      }
+    } catch {
+      /* fall through */
+    }
+  }
+
+  // Format 4: Raw base64 only (between headers) — reconstruct PEM
+  const b64 = trimmed
+    .replace(/^["']|["']$/g, '')
+    .replace(/\\n/g, '\n')
+    .replace(/-----BEGIN EC PRIVATE KEY-----/g, '')
+    .replace(/-----END EC PRIVATE KEY-----/g, '')
+    .replace(/[\s\r\n]/g, '');
+  if (b64.length > 0 && /^[A-Za-z0-9+/=]+$/.test(b64)) {
+    return `-----BEGIN EC PRIVATE KEY-----\n${b64}\n-----END EC PRIVATE KEY-----\n`;
+  }
+
+  return null;
+}
+
 // CloudKit Web Services — write nomination to public database
 async function sendToCloudKit(
   data: NominationPayload,
   insights: NominationAiInsights | null
 ): Promise<void> {
-  const CLOUDKIT_CONTAINER = (process.env.CLOUDKIT_CONTAINER_ID || '').trim();
+  // Support both CLOUDKIT_CONTAINER_ID and CLOUDKIT_CONTAINER; trim aggressively (Vercel can add \n)
+  const CLOUDKIT_CONTAINER = (
+    process.env.CLOUDKIT_CONTAINER_ID ||
+    process.env.CLOUDKIT_CONTAINER ||
+    ''
+  ).replace(/\s+/g, '').trim();
   const CLOUDKIT_KEY_ID = (process.env.CLOUDKIT_KEY_ID || '').trim();
   const CLOUDKIT_PRIVATE_KEY_RAW = (process.env.CLOUDKIT_PRIVATE_KEY || '').trim();
   const CLOUDKIT_ENVIRONMENT = (process.env.CLOUDKIT_ENVIRONMENT || 'development').trim();
 
-  if (!CLOUDKIT_CONTAINER || !CLOUDKIT_KEY_ID || !CLOUDKIT_PRIVATE_KEY_RAW) {
-    console.warn('CloudKit not configured; skipping. Container:', !!CLOUDKIT_CONTAINER, 'KeyID:', !!CLOUDKIT_KEY_ID, 'PrivKey:', !!CLOUDKIT_PRIVATE_KEY_RAW);
+  const privateKey = parseCloudKitPrivateKey(CLOUDKIT_PRIVATE_KEY_RAW);
+
+  if (!CLOUDKIT_CONTAINER || !CLOUDKIT_KEY_ID || !privateKey) {
+    console.warn(
+      'CloudKit not configured; skipping. Container:', !!CLOUDKIT_CONTAINER,
+      'KeyID:', !!CLOUDKIT_KEY_ID,
+      'PrivKey:', !!privateKey
+    );
     return;
   }
 
-  // Robust PEM key reconstruction
-  // Vercel env vars can store the key in many formats:
-  // 1. With literal \n characters (escaped): "-----BEGIN...-----\nMHc...\n-----END...-----"
-  // 2. With real newlines (multi-line paste)
-  // 3. All on one line with no separators
-  // 4. With surrounding quotes
-  // Strategy: extract the raw base64 and reconstruct a proper PEM
-  let keyStr = CLOUDKIT_PRIVATE_KEY_RAW
-    .replace(/^["']|["']$/g, '')          // Remove surrounding quotes
-    .replace(/\\n/g, '\n')                // Convert literal \n to real newlines
-    .replace(/-----BEGIN EC PRIVATE KEY-----/g, '')
-    .replace(/-----END EC PRIVATE KEY-----/g, '')
-    .replace(/[\s\r\n]/g, '');            // Remove all whitespace
-
-  // keyStr is now pure base64 — reconstruct proper PEM
-  const privateKey = `-----BEGIN EC PRIVATE KEY-----\n${keyStr}\n-----END EC PRIVATE KEY-----\n`;
-
-  console.log('CloudKit config: container=' + CLOUDKIT_CONTAINER + ' env=' + CLOUDKIT_ENVIRONMENT + ' keyID=' + CLOUDKIT_KEY_ID.substring(0, 8) + '... b64Len=' + keyStr.length);
+  console.log('CloudKit config: container=' + CLOUDKIT_CONTAINER + ' env=' + CLOUDKIT_ENVIRONMENT + ' keyID=' + CLOUDKIT_KEY_ID.substring(0, 8) + '...');
 
   // Build CloudKit record fields
   const fields: Record<string, { value: unknown; type: string }> = {
@@ -348,27 +392,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'GET') {
     const hasSlack = !!process.env.SLACK_WEBHOOK_URL;
     const hasOpenAI = !!process.env.OPENAI_API_KEY;
-    const containerRaw = (process.env.CLOUDKIT_CONTAINER_ID || '').trim();
+    const containerRaw = (
+      process.env.CLOUDKIT_CONTAINER_ID ||
+      process.env.CLOUDKIT_CONTAINER ||
+      ''
+    ).replace(/\s+/g, '').trim();
     const keyIdRaw = (process.env.CLOUDKIT_KEY_ID || '').trim();
     const privKeyRaw = (process.env.CLOUDKIT_PRIVATE_KEY || '').trim();
     const hasContainer = !!containerRaw;
     const hasKeyID = !!keyIdRaw;
-    const hasPrivKey = !!privKeyRaw;
+    const pk = parseCloudKitPrivateKey(privKeyRaw);
     const ckEnv = (process.env.CLOUDKIT_ENVIRONMENT || 'development').trim();
 
-    // Test CloudKit write if all keys present
+    // Test CloudKit write if all keys present and key parses
     let cloudkitTest = 'not configured';
-    if (hasContainer && hasKeyID && hasPrivKey) {
+    if (hasContainer && hasKeyID && pk) {
       try {
-        // Same robust PEM reconstruction as sendToCloudKit
-        const b64 = privKeyRaw
-          .replace(/^["']|["']$/g, '')
-          .replace(/\\n/g, '\n')
-          .replace(/-----BEGIN EC PRIVATE KEY-----/g, '')
-          .replace(/-----END EC PRIVATE KEY-----/g, '')
-          .replace(/[\s\r\n]/g, '');
-        const pk = `-----BEGIN EC PRIVATE KEY-----\n${b64}\n-----END EC PRIVATE KEY-----\n`;
-
         const subpath = `/database/1/${containerRaw}/${ckEnv}/public/records/modify`;
         const testBody = JSON.stringify({
           operations: [{
@@ -413,6 +452,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       } catch (err: any) {
         cloudkitTest = `ERROR: ${err.message}`;
       }
+    } else if (hasContainer && hasKeyID && !pk) {
+      cloudkitTest = 'ERROR: Private key failed to parse (check format in Vercel env)';
     }
 
     return res.status(200).json({
@@ -422,7 +463,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         OPENAI_API_KEY: hasOpenAI,
         CLOUDKIT_CONTAINER_ID: hasContainer ? containerRaw : false,
         CLOUDKIT_KEY_ID: hasKeyID ? keyIdRaw.substring(0, 8) + '...' : false,
-        CLOUDKIT_PRIVATE_KEY: hasPrivKey ? `set (${privKeyRaw.length} chars, b64: ${privKeyRaw.replace(/\\n/g, '\n').replace(/-----BEGIN EC PRIVATE KEY-----/g, '').replace(/-----END EC PRIVATE KEY-----/g, '').replace(/[\s\r\n]/g, '').length} b64 chars)` : false,
+        CLOUDKIT_PRIVATE_KEY: pk ? 'parsed OK' : (privKeyRaw ? `parse failed (${privKeyRaw.length} chars raw)` : false),
         CLOUDKIT_ENVIRONMENT: ckEnv,
       },
       cloudkitTest,
