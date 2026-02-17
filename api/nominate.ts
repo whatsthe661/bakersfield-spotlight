@@ -239,28 +239,34 @@ async function sendToCloudKit(
   data: NominationPayload,
   insights: NominationAiInsights | null
 ): Promise<void> {
-  const CLOUDKIT_CONTAINER = process.env.CLOUDKIT_CONTAINER_ID;
-  const CLOUDKIT_KEY_ID = process.env.CLOUDKIT_KEY_ID;
-  const CLOUDKIT_PRIVATE_KEY = process.env.CLOUDKIT_PRIVATE_KEY;
-  const CLOUDKIT_ENVIRONMENT = process.env.CLOUDKIT_ENVIRONMENT || 'development';
+  const CLOUDKIT_CONTAINER = (process.env.CLOUDKIT_CONTAINER_ID || '').trim();
+  const CLOUDKIT_KEY_ID = (process.env.CLOUDKIT_KEY_ID || '').trim();
+  const CLOUDKIT_PRIVATE_KEY_RAW = (process.env.CLOUDKIT_PRIVATE_KEY || '').trim();
+  const CLOUDKIT_ENVIRONMENT = (process.env.CLOUDKIT_ENVIRONMENT || 'development').trim();
 
-  if (!CLOUDKIT_CONTAINER || !CLOUDKIT_KEY_ID || !CLOUDKIT_PRIVATE_KEY) {
-    console.warn('CloudKit not configured; skipping. Container:', !!CLOUDKIT_CONTAINER, 'KeyID:', !!CLOUDKIT_KEY_ID, 'PrivKey:', !!CLOUDKIT_PRIVATE_KEY);
+  if (!CLOUDKIT_CONTAINER || !CLOUDKIT_KEY_ID || !CLOUDKIT_PRIVATE_KEY_RAW) {
+    console.warn('CloudKit not configured; skipping. Container:', !!CLOUDKIT_CONTAINER, 'KeyID:', !!CLOUDKIT_KEY_ID, 'PrivKey:', !!CLOUDKIT_PRIVATE_KEY_RAW);
     return;
   }
 
-  // Handle Private Key: it might be raw PEM or have escaped newlines from env vars
-  // Vercel may store the key with literal \n or with real newlines depending on how it was pasted
-  let privateKey = CLOUDKIT_PRIVATE_KEY.replace(/\\n/g, '\n');
+  // Robust PEM key reconstruction
+  // Vercel env vars can store the key in many formats:
+  // 1. With literal \n characters (escaped): "-----BEGIN...-----\nMHc...\n-----END...-----"
+  // 2. With real newlines (multi-line paste)
+  // 3. All on one line with no separators
+  // 4. With surrounding quotes
+  // Strategy: extract the raw base64 and reconstruct a proper PEM
+  let keyStr = CLOUDKIT_PRIVATE_KEY_RAW
+    .replace(/^["']|["']$/g, '')          // Remove surrounding quotes
+    .replace(/\\n/g, '\n')                // Convert literal \n to real newlines
+    .replace(/-----BEGIN EC PRIVATE KEY-----/g, '')
+    .replace(/-----END EC PRIVATE KEY-----/g, '')
+    .replace(/[\s\r\n]/g, '');            // Remove all whitespace
 
-  // If the key doesn't contain real newlines after the header, it's a single-line base64 that needs wrapping
-  if (!privateKey.includes('\nMH') && privateKey.includes('MH')) {
-    // The key was stored without any newlines — reconstruct it
-    const b64 = privateKey.replace('-----BEGIN EC PRIVATE KEY-----', '').replace('-----END EC PRIVATE KEY-----', '').replace(/\s/g, '');
-    privateKey = `-----BEGIN EC PRIVATE KEY-----\n${b64}\n-----END EC PRIVATE KEY-----`;
-  }
+  // keyStr is now pure base64 — reconstruct proper PEM
+  const privateKey = `-----BEGIN EC PRIVATE KEY-----\n${keyStr}\n-----END EC PRIVATE KEY-----\n`;
 
-  console.log('CloudKit config: container=' + CLOUDKIT_CONTAINER + ' env=' + CLOUDKIT_ENVIRONMENT + ' keyID=' + CLOUDKIT_KEY_ID.substring(0, 8) + '... keyLen=' + privateKey.length);
+  console.log('CloudKit config: container=' + CLOUDKIT_CONTAINER + ' env=' + CLOUDKIT_ENVIRONMENT + ' keyID=' + CLOUDKIT_KEY_ID.substring(0, 8) + '... b64Len=' + keyStr.length);
 
   // Build CloudKit record fields
   const fields: Record<string, { value: unknown; type: string }> = {
@@ -342,22 +348,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'GET') {
     const hasSlack = !!process.env.SLACK_WEBHOOK_URL;
     const hasOpenAI = !!process.env.OPENAI_API_KEY;
-    const hasContainer = !!process.env.CLOUDKIT_CONTAINER_ID;
-    const hasKeyID = !!process.env.CLOUDKIT_KEY_ID;
-    const hasPrivKey = !!process.env.CLOUDKIT_PRIVATE_KEY;
-    const ckEnv = process.env.CLOUDKIT_ENVIRONMENT || 'development';
+    const containerRaw = (process.env.CLOUDKIT_CONTAINER_ID || '').trim();
+    const keyIdRaw = (process.env.CLOUDKIT_KEY_ID || '').trim();
+    const privKeyRaw = (process.env.CLOUDKIT_PRIVATE_KEY || '').trim();
+    const hasContainer = !!containerRaw;
+    const hasKeyID = !!keyIdRaw;
+    const hasPrivKey = !!privKeyRaw;
+    const ckEnv = (process.env.CLOUDKIT_ENVIRONMENT || 'development').trim();
 
     // Test CloudKit write if all keys present
     let cloudkitTest = 'not configured';
     if (hasContainer && hasKeyID && hasPrivKey) {
       try {
-        let pk = process.env.CLOUDKIT_PRIVATE_KEY!.replace(/\\n/g, '\n');
-        if (!pk.includes('\nMH') && pk.includes('MH')) {
-          const b64 = pk.replace('-----BEGIN EC PRIVATE KEY-----', '').replace('-----END EC PRIVATE KEY-----', '').replace(/\s/g, '');
-          pk = `-----BEGIN EC PRIVATE KEY-----\n${b64}\n-----END EC PRIVATE KEY-----`;
-        }
+        // Same robust PEM reconstruction as sendToCloudKit
+        const b64 = privKeyRaw
+          .replace(/^["']|["']$/g, '')
+          .replace(/\\n/g, '\n')
+          .replace(/-----BEGIN EC PRIVATE KEY-----/g, '')
+          .replace(/-----END EC PRIVATE KEY-----/g, '')
+          .replace(/[\s\r\n]/g, '');
+        const pk = `-----BEGIN EC PRIVATE KEY-----\n${b64}\n-----END EC PRIVATE KEY-----\n`;
 
-        const subpath = `/database/1/${process.env.CLOUDKIT_CONTAINER_ID}/${ckEnv}/public/records/modify`;
+        const subpath = `/database/1/${containerRaw}/${ckEnv}/public/records/modify`;
         const testBody = JSON.stringify({
           operations: [{
             operationType: 'create',
@@ -385,7 +397,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-Apple-CloudKit-Request-KeyID': process.env.CLOUDKIT_KEY_ID!,
+            'X-Apple-CloudKit-Request-KeyID': keyIdRaw,
             'X-Apple-CloudKit-Request-ISO8601Date': date,
             'X-Apple-CloudKit-Request-SignatureV1': signature,
           },
@@ -408,9 +420,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       env: {
         SLACK_WEBHOOK_URL: hasSlack,
         OPENAI_API_KEY: hasOpenAI,
-        CLOUDKIT_CONTAINER_ID: hasContainer ? process.env.CLOUDKIT_CONTAINER_ID : false,
-        CLOUDKIT_KEY_ID: hasKeyID ? process.env.CLOUDKIT_KEY_ID!.substring(0, 8) + '...' : false,
-        CLOUDKIT_PRIVATE_KEY: hasPrivKey ? `set (${process.env.CLOUDKIT_PRIVATE_KEY!.length} chars)` : false,
+        CLOUDKIT_CONTAINER_ID: hasContainer ? containerRaw : false,
+        CLOUDKIT_KEY_ID: hasKeyID ? keyIdRaw.substring(0, 8) + '...' : false,
+        CLOUDKIT_PRIVATE_KEY: hasPrivKey ? `set (${privKeyRaw.length} chars, b64: ${privKeyRaw.replace(/\\n/g, '\n').replace(/-----BEGIN EC PRIVATE KEY-----/g, '').replace(/-----END EC PRIVATE KEY-----/g, '').replace(/[\s\r\n]/g, '').length} b64 chars)` : false,
         CLOUDKIT_ENVIRONMENT: ckEnv,
       },
       cloudkitTest,
