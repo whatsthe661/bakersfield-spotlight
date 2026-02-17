@@ -5,12 +5,15 @@
  * - Posts them into Slack via SLACK_WEBHOOK_URL
  * - Calls OpenAI with OPENAI_API_KEY to enrich each nomination with 
  *   showrunner insights (logline, angle, questions, b-roll, etc.)
+ * - Writes them to CloudKit (public database) for the iOS Prospects app
+ * - Slack and CloudKit run in parallel; Slack is required, CloudKit is best-effort
  * - All secrets live in .env.local and are not committed to Git
- * - Fails gracefully if AI is unavailable, but Slack notifications still work
+ * - Fails gracefully if AI or CloudKit is unavailable
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import OpenAI from 'openai';
+import { createSign, createHash } from 'crypto';
 
 // Types
 interface NominationPayload {
@@ -231,6 +234,98 @@ function buildSlackMessage(data: NominationPayload, insights: NominationAiInsigh
   };
 }
 
+// CloudKit Web Services — write nomination to public database
+async function sendToCloudKit(
+  data: NominationPayload,
+  insights: NominationAiInsights | null
+): Promise<void> {
+  const CLOUDKIT_CONTAINER = process.env.CLOUDKIT_CONTAINER_ID;
+  const CLOUDKIT_KEY_ID = process.env.CLOUDKIT_KEY_ID;
+  const CLOUDKIT_PRIVATE_KEY = process.env.CLOUDKIT_PRIVATE_KEY;
+  const CLOUDKIT_ENVIRONMENT = process.env.CLOUDKIT_ENVIRONMENT || 'development';
+
+  if (!CLOUDKIT_CONTAINER || !CLOUDKIT_KEY_ID || !CLOUDKIT_PRIVATE_KEY) {
+    console.warn('CloudKit not configured; skipping.');
+    return;
+  }
+
+  // Handle Private Key: it might be raw PEM or have escaped newlines from env vars
+  const privateKey = CLOUDKIT_PRIVATE_KEY.replace(/\\n/g, '\n');
+
+  // Build CloudKit record fields
+  const fields: Record<string, { value: unknown; type: string }> = {
+    businessName: { value: data.businessName, type: 'STRING' },
+    nominatorName: { value: data.nominatorName, type: 'STRING' },
+    nominatorEmail: { value: data.nominatorEmail, type: 'STRING' },
+    reason: { value: data.reason, type: 'STRING' },
+    status: { value: 'new', type: 'STRING' },
+    submittedAt: { value: Date.now(), type: 'TIMESTAMP' },
+    notifyBusiness: { value: data.notifyBusiness ? 1 : 0, type: 'INT64' },
+  };
+
+  if (data.nominatorPhone) {
+    fields.nominatorPhone = { value: data.nominatorPhone, type: 'STRING' };
+  }
+  if (data.businessWebsiteOrInstagram) {
+    fields.businessWebsiteOrInstagram = { value: data.businessWebsiteOrInstagram, type: 'STRING' };
+  }
+  if (data.businessContact) {
+    fields.businessContact = { value: data.businessContact, type: 'STRING' };
+  }
+
+  // Include AI insights so the iOS app has them immediately
+  if (insights) {
+    fields.aiLogline = { value: insights.logline, type: 'STRING' };
+    fields.aiEpisodeAngle = { value: insights.episodeAngle, type: 'STRING' };
+    fields.aiEmotionalTone = { value: insights.emotionalTone, type: 'STRING' };
+    fields.aiPriorityScore = { value: insights.priorityScore, type: 'INT64' };
+    fields.aiKeyThemes = { value: insights.keyThemes, type: 'STRING_LIST' };
+    fields.aiSuggestedQuestions = { value: insights.suggestedQuestions, type: 'STRING_LIST' };
+    fields.aiBrollIdeas = { value: insights.brollIdeas, type: 'STRING_LIST' };
+    fields.aiResearchIdeas = { value: insights.researchIdeas, type: 'STRING_LIST' };
+    fields.aiNotesForShowrunner = { value: insights.notesForShowrunner, type: 'STRING' };
+  }
+
+  const requestBody = JSON.stringify({
+    operations: [{
+      operationType: 'create',
+      record: {
+        recordType: 'Nomination',
+        fields,
+      }
+    }]
+  });
+
+  // CloudKit server-to-server signed request
+  const subpath = `/database/1/${CLOUDKIT_CONTAINER}/${CLOUDKIT_ENVIRONMENT}/public/records/modify`;
+  const url = `https://api.apple-cloudkit.com${subpath}`;
+  const date = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
+
+  const bodyHash = createHash('sha256').update(requestBody, 'utf8').digest('base64');
+  const message = `${date}:${bodyHash}:${subpath}`;
+  const signer = createSign('SHA256');
+  signer.update(message);
+  const signature = signer.sign(privateKey, 'base64');
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Apple-CloudKit-Request-KeyID': CLOUDKIT_KEY_ID,
+      'X-Apple-CloudKit-Request-ISO8601Date': date,
+      'X-Apple-CloudKit-Request-SignatureV1': signature,
+    },
+    body: requestBody,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`CloudKit error ${response.status}: ${errorText}`);
+  }
+
+  console.log('Nomination written to CloudKit successfully');
+}
+
 // Main handler
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Only allow POST
@@ -306,34 +401,42 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.warn('OPENAI_API_KEY is not set; skipping AI enrichment.');
   }
 
-  // Build and send Slack message
+  // Fan out: send to Slack and CloudKit in parallel
+  // Slack is required (failure = error to user), CloudKit is best-effort
   const slackMessage = buildSlackMessage(data, aiInsights);
 
-  try {
-    const slackResponse = await fetch(SLACK_WEBHOOK_URL, {
+  const [slackResult, cloudKitResult] = await Promise.allSettled([
+    fetch(SLACK_WEBHOOK_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(slackMessage),
-    });
+    }),
+    sendToCloudKit(data, aiInsights),
+  ]);
 
-    if (!slackResponse.ok) {
-      const errorText = await slackResponse.text();
-      console.error('Slack webhook error:', slackResponse.status, errorText);
-      return res.status(500).json({ 
-        success: false, 
-        error: 'Failed to send nomination. Please try again later.' 
-      });
-    }
-
-    return res.status(200).json({ success: true });
-
-  } catch (error) {
-    console.error('Error sending to Slack:', error);
-    return res.status(500).json({ 
-      success: false, 
-      error: 'Failed to send nomination. Please try again later.' 
+  // Check Slack result — this is the critical path
+  if (slackResult.status === 'rejected') {
+    console.error('Slack webhook error:', slackResult.reason);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to send nomination. Please try again later.'
     });
   }
+
+  const slackResponse = slackResult.value;
+  if (!slackResponse.ok) {
+    const errorText = await slackResponse.text();
+    console.error('Slack webhook error:', slackResponse.status, errorText);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to send nomination. Please try again later.'
+    });
+  }
+
+  // CloudKit is non-critical — log failures but don't block the user
+  if (cloudKitResult.status === 'rejected') {
+    console.warn('CloudKit write failed (non-fatal):', cloudKitResult.reason);
+  }
+
+  return res.status(200).json({ success: true });
 }
