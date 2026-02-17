@@ -245,12 +245,22 @@ async function sendToCloudKit(
   const CLOUDKIT_ENVIRONMENT = process.env.CLOUDKIT_ENVIRONMENT || 'development';
 
   if (!CLOUDKIT_CONTAINER || !CLOUDKIT_KEY_ID || !CLOUDKIT_PRIVATE_KEY) {
-    console.warn('CloudKit not configured; skipping.');
+    console.warn('CloudKit not configured; skipping. Container:', !!CLOUDKIT_CONTAINER, 'KeyID:', !!CLOUDKIT_KEY_ID, 'PrivKey:', !!CLOUDKIT_PRIVATE_KEY);
     return;
   }
 
   // Handle Private Key: it might be raw PEM or have escaped newlines from env vars
-  const privateKey = CLOUDKIT_PRIVATE_KEY.replace(/\\n/g, '\n');
+  // Vercel may store the key with literal \n or with real newlines depending on how it was pasted
+  let privateKey = CLOUDKIT_PRIVATE_KEY.replace(/\\n/g, '\n');
+
+  // If the key doesn't contain real newlines after the header, it's a single-line base64 that needs wrapping
+  if (!privateKey.includes('\nMH') && privateKey.includes('MH')) {
+    // The key was stored without any newlines — reconstruct it
+    const b64 = privateKey.replace('-----BEGIN EC PRIVATE KEY-----', '').replace('-----END EC PRIVATE KEY-----', '').replace(/\s/g, '');
+    privateKey = `-----BEGIN EC PRIVATE KEY-----\n${b64}\n-----END EC PRIVATE KEY-----`;
+  }
+
+  console.log('CloudKit config: container=' + CLOUDKIT_CONTAINER + ' env=' + CLOUDKIT_ENVIRONMENT + ' keyID=' + CLOUDKIT_KEY_ID.substring(0, 8) + '... keyLen=' + privateKey.length);
 
   // Build CloudKit record fields
   const fields: Record<string, { value: unknown; type: string }> = {
@@ -328,7 +338,86 @@ async function sendToCloudKit(
 
 // Main handler
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Only allow POST
+  // GET = diagnostic check (no secrets exposed)
+  if (req.method === 'GET') {
+    const hasSlack = !!process.env.SLACK_WEBHOOK_URL;
+    const hasOpenAI = !!process.env.OPENAI_API_KEY;
+    const hasContainer = !!process.env.CLOUDKIT_CONTAINER_ID;
+    const hasKeyID = !!process.env.CLOUDKIT_KEY_ID;
+    const hasPrivKey = !!process.env.CLOUDKIT_PRIVATE_KEY;
+    const ckEnv = process.env.CLOUDKIT_ENVIRONMENT || 'development';
+
+    // Test CloudKit write if all keys present
+    let cloudkitTest = 'not configured';
+    if (hasContainer && hasKeyID && hasPrivKey) {
+      try {
+        let pk = process.env.CLOUDKIT_PRIVATE_KEY!.replace(/\\n/g, '\n');
+        if (!pk.includes('\nMH') && pk.includes('MH')) {
+          const b64 = pk.replace('-----BEGIN EC PRIVATE KEY-----', '').replace('-----END EC PRIVATE KEY-----', '').replace(/\s/g, '');
+          pk = `-----BEGIN EC PRIVATE KEY-----\n${b64}\n-----END EC PRIVATE KEY-----`;
+        }
+
+        const subpath = `/database/1/${process.env.CLOUDKIT_CONTAINER_ID}/${ckEnv}/public/records/modify`;
+        const testBody = JSON.stringify({
+          operations: [{
+            operationType: 'create',
+            record: {
+              recordType: 'Nomination',
+              fields: {
+                businessName: { value: 'Vercel Diagnostic Test', type: 'STRING' },
+                status: { value: 'test', type: 'STRING' },
+                submittedAt: { value: Date.now(), type: 'TIMESTAMP' },
+                nominatorName: { value: 'Diagnostic', type: 'STRING' },
+                reason: { value: 'Auto-test from GET /api/nominate', type: 'STRING' },
+                notifyBusiness: { value: 0, type: 'INT64' },
+              }
+            }
+          }]
+        });
+        const date = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
+        const bodyHash = createHash('sha256').update(testBody, 'utf8').digest('base64');
+        const message = `${date}:${bodyHash}:${subpath}`;
+        const signer = createSign('SHA256');
+        signer.update(message);
+        const signature = signer.sign(pk, 'base64');
+
+        const resp = await fetch(`https://api.apple-cloudkit.com${subpath}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Apple-CloudKit-Request-KeyID': process.env.CLOUDKIT_KEY_ID!,
+            'X-Apple-CloudKit-Request-ISO8601Date': date,
+            'X-Apple-CloudKit-Request-SignatureV1': signature,
+          },
+          body: testBody,
+        });
+
+        if (resp.ok) {
+          cloudkitTest = 'SUCCESS - wrote test record';
+        } else {
+          const errBody = await resp.text();
+          cloudkitTest = `FAILED (${resp.status}): ${errBody.substring(0, 200)}`;
+        }
+      } catch (err: any) {
+        cloudkitTest = `ERROR: ${err.message}`;
+      }
+    }
+
+    return res.status(200).json({
+      status: 'ok',
+      env: {
+        SLACK_WEBHOOK_URL: hasSlack,
+        OPENAI_API_KEY: hasOpenAI,
+        CLOUDKIT_CONTAINER_ID: hasContainer ? process.env.CLOUDKIT_CONTAINER_ID : false,
+        CLOUDKIT_KEY_ID: hasKeyID ? process.env.CLOUDKIT_KEY_ID!.substring(0, 8) + '...' : false,
+        CLOUDKIT_PRIVATE_KEY: hasPrivKey ? `set (${process.env.CLOUDKIT_PRIVATE_KEY!.length} chars)` : false,
+        CLOUDKIT_ENVIRONMENT: ckEnv,
+      },
+      cloudkitTest,
+    });
+  }
+
+  // Only allow POST for submissions
   if (req.method !== 'POST') {
     return res.status(405).json({ success: false, error: 'Method not allowed' });
   }
