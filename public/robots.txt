@@ -1,0 +1,8 @@
+# What's the 661 - robots.txt
+# https://whatsthe661.com
+
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://whatsthe661.com/sitemap.xml
