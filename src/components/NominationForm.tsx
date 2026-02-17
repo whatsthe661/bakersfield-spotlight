@@ -17,6 +17,7 @@ export function NominationForm({ isOpen, onClose }: NominationFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [cloudkitError, setCloudkitError] = useState<string | null>(null);
   const [errors, setErrors] = useState<Partial<Record<keyof NominationPayload, string>>>({});
   
   const prefersReducedMotion = useReducedMotion();
@@ -74,6 +75,7 @@ export function NominationForm({ isOpen, onClose }: NominationFormProps) {
     try {
       const result = await submitNomination(formData);
       if (result.success) {
+        setCloudkitError(result.cloudkitOk === false ? (result.cloudkitError || 'CloudKit sync failed') : null);
         setIsSuccess(true);
       } else {
         setSubmitError(result.error || 'Something went wrong. Please try again.');
@@ -95,6 +97,7 @@ export function NominationForm({ isOpen, onClose }: NominationFormProps) {
       setIsSubmitting(false);
       setErrors({});
       setSubmitError(null);
+      setCloudkitError(null);
     }, 300);
   };
 
@@ -145,7 +148,7 @@ export function NominationForm({ isOpen, onClose }: NominationFormProps) {
             </motion.button>
 
             {isSuccess ? (
-              <SuccessState />
+              <SuccessState cloudkitError={cloudkitError} />
             ) : (
               <>
                 {/* Header */}

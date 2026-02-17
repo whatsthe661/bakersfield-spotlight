@@ -288,7 +288,7 @@ function parseCloudKitPrivateKey(raw: string): string | null {
 async function sendToCloudKit(
   data: NominationPayload,
   insights: NominationAiInsights | null
-): Promise<void> {
+): Promise<{ ok: boolean; error?: string }> {
   // Support both CLOUDKIT_CONTAINER_ID and CLOUDKIT_CONTAINER; trim aggressively (Vercel can add \n)
   const CLOUDKIT_CONTAINER = (
     process.env.CLOUDKIT_CONTAINER_ID ||
@@ -307,7 +307,7 @@ async function sendToCloudKit(
       'KeyID:', !!CLOUDKIT_KEY_ID,
       'PrivKey:', !!privateKey
     );
-    return;
+    return { ok: false, error: 'CloudKit not configured' };
   }
 
   console.log('CloudKit config: container=' + CLOUDKIT_CONTAINER + ' env=' + CLOUDKIT_ENVIRONMENT + ' keyID=' + CLOUDKIT_KEY_ID.substring(0, 8) + '...');
@@ -333,16 +333,16 @@ async function sendToCloudKit(
     fields.businessContact = { value: data.businessContact, type: 'STRING' };
   }
 
-  // Include AI insights so the iOS app has them immediately
+  // Include AI insights — store lists as newline-separated STRING (CloudKit LIST format can be tricky)
   if (insights) {
     fields.aiLogline = { value: insights.logline, type: 'STRING' };
     fields.aiEpisodeAngle = { value: insights.episodeAngle, type: 'STRING' };
     fields.aiEmotionalTone = { value: insights.emotionalTone, type: 'STRING' };
     fields.aiPriorityScore = { value: insights.priorityScore, type: 'INT64' };
-    fields.aiKeyThemes = { value: insights.keyThemes, type: 'STRING_LIST' };
-    fields.aiSuggestedQuestions = { value: insights.suggestedQuestions, type: 'STRING_LIST' };
-    fields.aiBrollIdeas = { value: insights.brollIdeas, type: 'STRING_LIST' };
-    fields.aiResearchIdeas = { value: insights.researchIdeas, type: 'STRING_LIST' };
+    fields.aiKeyThemes = { value: insights.keyThemes.join('\n'), type: 'STRING' };
+    fields.aiSuggestedQuestions = { value: insights.suggestedQuestions.join('\n'), type: 'STRING' };
+    fields.aiBrollIdeas = { value: insights.brollIdeas.join('\n'), type: 'STRING' };
+    fields.aiResearchIdeas = { value: insights.researchIdeas.join('\n'), type: 'STRING' };
     fields.aiNotesForShowrunner = { value: insights.notesForShowrunner, type: 'STRING' };
   }
 
@@ -367,23 +367,28 @@ async function sendToCloudKit(
   signer.update(message);
   const signature = signer.sign(privateKey, 'base64');
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Apple-CloudKit-Request-KeyID': CLOUDKIT_KEY_ID,
-      'X-Apple-CloudKit-Request-ISO8601Date': date,
-      'X-Apple-CloudKit-Request-SignatureV1': signature,
-    },
-    body: requestBody,
-  });
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Apple-CloudKit-Request-KeyID': CLOUDKIT_KEY_ID,
+        'X-Apple-CloudKit-Request-ISO8601Date': date,
+        'X-Apple-CloudKit-Request-SignatureV1': signature,
+      },
+      body: requestBody,
+    });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`CloudKit error ${response.status}: ${errorText}`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      return { ok: false, error: `CloudKit ${response.status}: ${errorText.substring(0, 150)}` };
+    }
+
+    console.log('Nomination written to CloudKit successfully');
+    return { ok: true };
+  } catch (err: any) {
+    return { ok: false, error: err?.message || String(err) };
   }
-
-  console.log('Nomination written to CloudKit successfully');
 }
 
 // Main handler
@@ -475,8 +480,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ success: false, error: 'Method not allowed' });
   }
 
-  // Check environment variables
-  const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL;
+  // Check environment variables (support SLACK_WEBHOOK_URL_2 as fallback)
+  const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL || process.env.SLACK_WEBHOOK_URL_2;
   const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
   
   if (!SLACK_WEBHOOK_URL) {
@@ -547,38 +552,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Slack is required (failure = error to user), CloudKit is best-effort
   const slackMessage = buildSlackMessage(data, aiInsights);
 
-  const [slackResult, cloudKitResult] = await Promise.allSettled([
-    fetch(SLACK_WEBHOOK_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(slackMessage),
-    }),
+  const [slackResult, cloudKitResult] = await Promise.all([
+    (async () => {
+      const r = await fetch(SLACK_WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(slackMessage),
+      });
+      return { ok: r.ok, error: r.ok ? null : await r.text() };
+    })(),
     sendToCloudKit(data, aiInsights),
   ]);
 
   // Check Slack result — this is the critical path
-  if (slackResult.status === 'rejected') {
-    console.error('Slack webhook error:', slackResult.reason);
+  if (!slackResult.ok) {
+    console.error('Slack webhook error:', slackResult.error);
     return res.status(500).json({
       success: false,
       error: 'Failed to send nomination. Please try again later.'
     });
   }
 
-  const slackResponse = slackResult.value;
-  if (!slackResponse.ok) {
-    const errorText = await slackResponse.text();
-    console.error('Slack webhook error:', slackResponse.status, errorText);
-    return res.status(500).json({
-      success: false,
-      error: 'Failed to send nomination. Please try again later.'
-    });
+  // CloudKit is non-critical — include status in response for debugging
+  const cloudkitOk = cloudKitResult.ok;
+  if (!cloudkitOk) {
+    console.warn('CloudKit write failed (non-fatal):', cloudKitResult.error);
   }
 
-  // CloudKit is non-critical — log failures but don't block the user
-  if (cloudKitResult.status === 'rejected') {
-    console.warn('CloudKit write failed (non-fatal):', cloudKitResult.reason);
-  }
-
-  return res.status(200).json({ success: true });
+  return res.status(200).json({
+    success: true,
+    cloudkitOk,
+    ...(cloudKitResult.error && { cloudkitError: cloudKitResult.error }),
+  });
 }

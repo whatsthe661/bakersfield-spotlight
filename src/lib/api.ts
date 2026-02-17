@@ -23,7 +23,11 @@ export async function submitNomination(data: NominationPayload): Promise<Nominat
       };
     }
 
-    return { success: true };
+    return {
+      success: true,
+      cloudkitOk: result.cloudkitOk,
+      cloudkitError: result.cloudkitError,
+    };
 
   } catch (error) {
     console.error('Network error submitting nomination:', error);

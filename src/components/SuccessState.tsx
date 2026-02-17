@@ -1,7 +1,11 @@
 import { motion, useReducedMotion } from 'framer-motion';
-import { Check } from 'lucide-react';
+import { Check, AlertCircle } from 'lucide-react';
 
-export function SuccessState() {
+interface SuccessStateProps {
+  cloudkitError?: string | null;
+}
+
+export function SuccessState({ cloudkitError }: SuccessStateProps) {
   const prefersReducedMotion = useReducedMotion();
 
   // Apple-like easing
@@ -74,6 +78,21 @@ export function SuccessState() {
       >
         We'll review it and reach out if this business is selected for the series.
       </motion.p>
+
+      {cloudkitError && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.7, duration: 0.3 }}
+          className="mt-6 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs max-w-sm mx-auto"
+        >
+          <div className="flex items-center gap-2 mb-1">
+            <AlertCircle size={14} />
+            <span className="font-medium">App sync issue</span>
+          </div>
+          <p className="text-left">Your nomination was saved to Slack, but the app may not receive it automatically. Error: {cloudkitError}</p>
+        </motion.div>
+      )}
     </motion.div>
   );
 }

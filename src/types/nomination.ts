@@ -18,6 +18,8 @@ export interface NominationPayload {
 export interface NominationResponse {
   success: boolean;
   error?: string;
+  cloudkitOk?: boolean;
+  cloudkitError?: string;
 }
 
 export type FormStep = 1 | 2 | 3 | 4;
