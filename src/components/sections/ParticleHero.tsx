@@ -80,7 +80,7 @@ export function ParticleHero({ onNominateClick }: { onNominateClick: () => void 
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: videoLoaded ? 1 : 0, y: videoLoaded ? 0 : 20 }}
                     transition={{ duration: 1.2, delay: 0.6, ease: easeOut }}
-                    className="text-lg md:text-xl font-body font-medium max-w-xl mx-auto mb-6 leading-relaxed tracking-wide hero-tagline-landscape text-cinematic"
+                    className="text-xl md:text-2xl font-body font-semibold max-w-xl mx-auto mb-6 leading-relaxed tracking-wide hero-tagline-landscape text-cinematic"
                     style={{ color: 'hsl(40 15% 92%)' }}
                 >
                     Celebrating the People and Soul of Bakersfield, California
@@ -89,7 +89,7 @@ export function ParticleHero({ onNominateClick }: { onNominateClick: () => void 
                     initial={{ opacity: 0 }}
                     animate={{ opacity: videoLoaded ? 1 : 0 }}
                     transition={{ duration: 1.2, delay: 0.9, ease: easeOut }}
-                    className="text-base font-body italic mb-8 hero-philosophy-landscape text-cinematic"
+                    className="text-lg font-body font-medium italic mb-8 hero-philosophy-landscape text-cinematic"
                     style={{ color: 'hsl(40 15% 80%)' }}
                 >
                     Every person is a world. Every episode is a window.
@@ -141,7 +141,7 @@ export function ParticleHero({ onNominateClick }: { onNominateClick: () => void 
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: videoLoaded ? 1 : 0, y: videoLoaded ? 0 : 20 }}
                         transition={{ duration: 1.2, delay: 0.6, ease: easeOut }}
-                        className="text-base font-body font-medium max-w-xs mx-auto mb-4 leading-relaxed tracking-wide text-cinematic"
+                        className="text-lg font-body font-semibold max-w-xs mx-auto mb-4 leading-relaxed tracking-wide text-cinematic"
                         style={{ color: 'hsl(40 15% 92%)' }}
                     >
                         Celebrating the People and Soul of Bakersfield, California
@@ -150,7 +150,7 @@ export function ParticleHero({ onNominateClick }: { onNominateClick: () => void 
                         initial={{ opacity: 0 }}
                         animate={{ opacity: videoLoaded ? 1 : 0 }}
                         transition={{ duration: 1.2, delay: 0.9, ease: easeOut }}
-                        className="text-sm font-body italic mb-6 text-cinematic"
+                        className="text-base font-body font-medium italic mb-6 text-cinematic"
                         style={{ color: 'hsl(40 15% 80%)' }}
                     >
                         Every person is a world. Every episode is a window.

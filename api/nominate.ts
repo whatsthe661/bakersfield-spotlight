@@ -379,12 +379,27 @@ async function sendToCloudKit(
       body: requestBody,
     });
 
+    const responseBody = await response.text();
+
     if (!response.ok) {
-      const errorText = await response.text();
-      return { ok: false, error: `CloudKit ${response.status}: ${errorText.substring(0, 150)}` };
+      return { ok: false, error: `CloudKit ${response.status}: ${responseBody.substring(0, 200)}` };
     }
 
-    console.log('Nomination written to CloudKit successfully');
+    // CloudKit can return HTTP 200 with per-record errors in the body.
+    // We must check the records array for serverErrorCode.
+    try {
+      const parsed = JSON.parse(responseBody);
+      const firstRecord = parsed?.records?.[0];
+      if (firstRecord?.serverErrorCode) {
+        const errMsg = `${firstRecord.serverErrorCode}: ${firstRecord.reason || 'unknown'}`;
+        console.error('CloudKit per-record error:', errMsg);
+        return { ok: false, error: errMsg };
+      }
+      console.log('Nomination written to CloudKit:', firstRecord?.recordName || 'ok');
+    } catch {
+      console.log('CloudKit write response (non-JSON):', responseBody.substring(0, 100));
+    }
+
     return { ok: true };
   } catch (err: any) {
     return { ok: false, error: err?.message || String(err) };
