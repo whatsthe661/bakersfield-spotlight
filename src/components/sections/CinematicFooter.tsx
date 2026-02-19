@@ -175,10 +175,10 @@ export function CinematicFooter() {
                 <div className="footer-reveal flex flex-col items-center gap-4">
                     <div className="flex items-center gap-6">
                         <a
-                            href="mailto:contact@whatsthe661.com"
+                            href="mailto:brandon@whatsthe661.com"
                             className="text-white/50 text-xs font-body hover:text-primary/60 transition-colors duration-200"
                         >
-                            contact@whatsthe661.com
+                            brandon@whatsthe661.com
                         </a>
                         <span className="text-white/20">•</span>
                         <Link
