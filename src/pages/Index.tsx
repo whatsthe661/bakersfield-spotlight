@@ -88,22 +88,6 @@ const Index = () => {
       <main ref={mainRef} className="relative z-10">
         <ParticleHero onNominateClick={() => setIsFormOpen(true)} />
 
-        {/* Featured YouTube Video */}
-        <section className="relative z-10 py-16 px-4 flex justify-center" style={{ background: 'linear-gradient(to bottom, transparent, rgba(15,13,11,0.95) 20%)' }}>
-          <div className="w-full max-w-3xl">
-            <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
-              <iframe
-                className="absolute inset-0 w-full h-full rounded-lg"
-                src="https://www.youtube.com/embed/V8FHX2Juarw"
-                title="What's the 661"
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-              />
-            </div>
-          </div>
-        </section>
-
         <ManifestoSection />
         <SeriesOverview />
         <CinematicFooter />

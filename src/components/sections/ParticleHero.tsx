@@ -51,7 +51,7 @@ export function ParticleHero({ onNominateClick }: { onNominateClick: () => void 
     const easeOut: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
     return (
-        <section className="relative w-full h-screen flex items-start justify-center overflow-hidden" id="hero">
+        <section className="relative w-full min-h-screen flex items-start justify-center overflow-hidden" id="hero">
             {/* Subtle radial glow */}
             <div className="absolute inset-0 pointer-events-none z-[2]" style={{
                 background: 'radial-gradient(ellipse at center, rgba(70, 110, 160, 0.03) 0%, transparent 60%)'
@@ -71,10 +71,27 @@ export function ParticleHero({ onNominateClick }: { onNominateClick: () => void 
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: videoLoaded ? 1 : 0, y: videoLoaded ? 0 : 20 }}
                     transition={{ duration: 1.2, delay: 0.3, ease: easeOut }}
-                    className="mb-32 md:mb-40"
+                    className="mb-8"
                     style={{ scale: logoScale, y: logoY }}
                 >
                     <img src={logo} alt="What's the 661 Logo" className="sm:w-[35vw] md:w-[24vw] lg:w-[19vw] max-w-[280px] mx-auto hero-logo-landscape" />
+                </motion.div>
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: videoLoaded ? 1 : 0, y: videoLoaded ? 0 : 20 }}
+                    transition={{ duration: 1.2, delay: 0.45, ease: easeOut }}
+                    className="w-full max-w-2xl mx-auto mb-8"
+                >
+                    <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                        <iframe
+                            className="absolute inset-0 w-full h-full rounded-lg"
+                            src="https://www.youtube.com/embed/V8FHX2Juarw"
+                            title="What's the 661"
+                            frameBorder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                            allowFullScreen
+                        />
+                    </div>
                 </motion.div>
                 <motion.p
                     initial={{ opacity: 0, y: 20 }}
@@ -133,6 +150,28 @@ export function ParticleHero({ onNominateClick }: { onNominateClick: () => void 
                         className="w-[65vw] max-w-[360px]"
                         style={{ scale: logoScale, y: logoY, transformOrigin: 'center center' }}
                     />
+                </motion.div>
+
+                {/* YouTube Video — below logo */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: videoLoaded ? 1 : 0, y: videoLoaded ? 0 : 20 }}
+                    transition={{ duration: 1.2, delay: 0.45, ease: easeOut }}
+                    className="absolute left-0 right-0 px-6 flex justify-center"
+                    style={{ top: '40%' }}
+                >
+                    <div className="w-full max-w-sm">
+                        <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                            <iframe
+                                className="absolute inset-0 w-full h-full rounded-lg"
+                                src="https://www.youtube.com/embed/V8FHX2Juarw"
+                                title="What's the 661"
+                                frameBorder="0"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                allowFullScreen
+                            />
+                        </div>
+                    </div>
                 </motion.div>
 
                 {/* Text + Button — positioned below the arch (~58% down) */}
