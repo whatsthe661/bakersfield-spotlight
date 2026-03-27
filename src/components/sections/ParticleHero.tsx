@@ -80,7 +80,7 @@ export function ParticleHero({ onNominateClick }: { onNominateClick: () => void 
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: videoLoaded ? 1 : 0, y: videoLoaded ? 0 : 20 }}
                     transition={{ duration: 1.2, delay: 0.45, ease: easeOut }}
-                    className="w-full max-w-2xl mx-auto mb-8"
+                    className="w-full max-w-4xl mx-auto mb-8"
                 >
                     <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
                         <iframe
@@ -128,54 +128,50 @@ export function ParticleHero({ onNominateClick }: { onNominateClick: () => void 
                 </motion.div>
             </motion.div>
 
-            {/* Mobile: logo centered in arch area, text+button below arch */}
+            {/* Mobile: vertical flow layout */}
             <motion.div
-                className="sm:hidden absolute inset-0 z-10 flex flex-col items-center"
+                className="sm:hidden relative z-10 flex flex-col items-center w-full pt-[5vh] px-6"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: videoLoaded ? 1 : 0 }}
                 transition={{ duration: 1.2, ease: easeOut }}
                 style={{ opacity: contentOpacity }}
             >
-                {/* Logo — above the arch, between top of screen and the arch */}
+                {/* Logo */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: videoLoaded ? 1 : 0, y: videoLoaded ? 0 : 20 }}
                     transition={{ duration: 1.2, delay: 0.3, ease: easeOut }}
-                    className="absolute left-0 right-0 flex justify-center items-center hero-mobile-logo"
-                    style={{ top: '5%', height: '38%' }}
+                    className="flex justify-center items-center mb-6 hero-mobile-logo"
                 >
                     <motion.img
                         src={logo}
                         alt="What's the 661 Logo"
-                        className="w-[65vw] max-w-[360px]"
+                        className="w-[50vw] max-w-[280px]"
                         style={{ scale: logoScale, y: logoY, transformOrigin: 'center center' }}
                     />
                 </motion.div>
 
-                {/* YouTube Video — below logo */}
+                {/* YouTube Video */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: videoLoaded ? 1 : 0, y: videoLoaded ? 0 : 20 }}
                     transition={{ duration: 1.2, delay: 0.45, ease: easeOut }}
-                    className="absolute left-0 right-0 px-6 flex justify-center"
-                    style={{ top: '40%' }}
+                    className="w-full mb-6"
                 >
-                    <div className="w-full max-w-sm">
-                        <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
-                            <iframe
-                                className="absolute inset-0 w-full h-full rounded-lg"
-                                src="https://www.youtube.com/embed/V8FHX2Juarw"
-                                title="What's the 661"
-                                frameBorder="0"
-                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                                allowFullScreen
-                            />
-                        </div>
+                    <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                        <iframe
+                            className="absolute inset-0 w-full h-full rounded-lg"
+                            src="https://www.youtube.com/embed/V8FHX2Juarw"
+                            title="What's the 661"
+                            frameBorder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                            allowFullScreen
+                        />
                     </div>
                 </motion.div>
 
-                {/* Text + Button — positioned below the arch (~58% down) */}
-                <div className="absolute left-0 right-0 px-6 text-center hero-mobile-text" style={{ top: '58%' }}>
+                {/* Text + Button */}
+                <div className="text-center hero-mobile-text">
                     <motion.p
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: videoLoaded ? 1 : 0, y: videoLoaded ? 0 : 20 }}
