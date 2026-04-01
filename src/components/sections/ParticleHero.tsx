@@ -93,6 +93,23 @@ export function ParticleHero({ onNominateClick }: { onNominateClick: () => void 
                         />
                     </div>
                 </motion.div>
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: videoLoaded ? 1 : 0, y: videoLoaded ? 0 : 20 }}
+                    transition={{ duration: 1.2, delay: 0.55, ease: easeOut }}
+                    className="w-full max-w-4xl mx-auto mb-8"
+                >
+                    <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                        <iframe
+                            className="absolute inset-0 w-full h-full rounded-lg"
+                            src="https://www.youtube.com/embed/2CFqKqFz72o"
+                            title="What's the 661"
+                            frameBorder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                            allowFullScreen
+                        />
+                    </div>
+                </motion.div>
                 <motion.p
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: videoLoaded ? 1 : 0, y: videoLoaded ? 0 : 20 }}
@@ -162,6 +179,25 @@ export function ParticleHero({ onNominateClick }: { onNominateClick: () => void 
                         <iframe
                             className="absolute inset-0 w-full h-full rounded-lg"
                             src="https://www.youtube.com/embed/V8FHX2Juarw"
+                            title="What's the 661"
+                            frameBorder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                            allowFullScreen
+                        />
+                    </div>
+                </motion.div>
+
+                {/* Second YouTube Video */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: videoLoaded ? 1 : 0, y: videoLoaded ? 0 : 20 }}
+                    transition={{ duration: 1.2, delay: 0.55, ease: easeOut }}
+                    className="w-full mb-6"
+                >
+                    <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                        <iframe
+                            className="absolute inset-0 w-full h-full rounded-lg"
+                            src="https://www.youtube.com/embed/2CFqKqFz72o"
                             title="What's the 661"
                             frameBorder="0"
                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
