@@ -1,0 +1,21 @@
+Attach “kern-ar-museum” to whatsthe661.com (only you)
+====================================================
+
+1) Pick a path that is NOT linked anywhere on the public site, for example:
+   https://whatsthe661.com/kcm-demo-<random-letters>/
+   Upload this project’s files under that folder (index.html at that path’s root).
+
+2) Ask search engines to ignore that folder — in the SITE ROOT robots.txt add:
+   User-agent: *
+   Disallow: /kcm-demo-<random-letters>/
+
+3) Optional soft lock (not strong security): copy
+   data/kcm-private-passphrase.sample.json
+   to  data/kcm-private-passphrase.json
+   and set "p" to a long random phrase. Upload with the site. Do not commit
+   kcm-private-passphrase.json if the repo is public.
+
+4) For real privacy, use host “directory password” (cPanel, Cloudflare Access,
+   etc.). The JSON phrase only stops casual visitors who guess the URL.
+
+5) All HTML pages include noindex so Google is less likely to list the URL.

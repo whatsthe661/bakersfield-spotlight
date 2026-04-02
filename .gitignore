@@ -28,3 +28,6 @@ dist-ssr
 *.sln
 *.sw?
 .vercel
+
+# KCM portal (optional passphrase — never commit real secret)
+public/kcm-portal/data/kcm-private-passphrase.json

@@ -1,0 +1,8 @@
+node_modules/
+generated/
+localhost.pem
+localhost-key.pem
+.env
+data/runtime-config.json
+data/uploads/*
+data/kcm-private-passphrase.json

@@ -1,0 +1,606 @@
+/* ============================================================
+   Experience Page — Camera Capture + AR Overlay
+   Optimized for iPhone 16 Pro Max
+   ============================================================ */
+
+/* --- Fullscreen layers --- */
+.fullscreen-layer {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+#camera-feed {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* --- AR Video Overlay --- */
+.ar-overlay {
+  z-index: 10;
+  overflow: hidden;
+  transition: opacity 0.4s ease;
+}
+
+.ar-overlay video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.1s ease-out;
+  /* Slightly oversize for parallax room */
+  transform: scale(1.05);
+}
+
+/* Portal opening animation */
+.ar-overlay.portal-opening {
+  animation: portalReveal 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes portalReveal {
+  0% {
+    clip-path: circle(0% at 50% 50%);
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    clip-path: circle(75% at 50% 50%);
+    opacity: 1;
+  }
+}
+
+/* Portal view mode — circular window */
+.ar-overlay.portal-view {
+  clip-path: circle(35% at 50% 50%);
+  transition: clip-path 0.6s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease;
+}
+
+.ar-overlay.portal-view::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at 50% 50%,
+    transparent 30%,
+    rgba(200, 149, 108, 0.15) 34%,
+    rgba(200, 149, 108, 0.4) 35%,
+    rgba(200, 149, 108, 0.15) 36%,
+    transparent 40%
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Fullscreen view mode */
+.ar-overlay.fullscreen-view {
+  clip-path: none;
+  transition: clip-path 0.6s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease;
+}
+
+/* Portal mask glow */
+.portal-mask {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  border-radius: 50%;
+}
+
+/* --- Capture Guide --- */
+.capture-guide {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 80%;
+  max-width: 340px;
+  aspect-ratio: 4 / 3;
+  pointer-events: none;
+  z-index: 51;
+}
+
+.guide-corners {
+  position: absolute;
+  inset: 0;
+}
+
+.corner {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border-color: var(--color-accent);
+  border-style: solid;
+  border-width: 0;
+  opacity: 0.6;
+}
+
+.corner.tl { top: 0; left: 0; border-top-width: 2px; border-left-width: 2px; border-top-left-radius: 4px; }
+.corner.tr { top: 0; right: 0; border-top-width: 2px; border-right-width: 2px; border-top-right-radius: 4px; }
+.corner.bl { bottom: 0; left: 0; border-bottom-width: 2px; border-left-width: 2px; border-bottom-left-radius: 4px; }
+.corner.br { bottom: 0; right: 0; border-bottom-width: 2px; border-right-width: 2px; border-bottom-right-radius: 4px; }
+
+.guide-text {
+  position: absolute;
+  bottom: -36px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.7);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7);
+  text-align: center;
+}
+
+/* --- Shutter Button --- */
+.capture-controls {
+  gap: 28px !important;
+}
+
+.shutter-btn {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  padding: 0;
+}
+
+.shutter-ring {
+  position: absolute;
+  inset: 0;
+  border: 4px solid rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  transition: all 0.15s ease;
+}
+
+.shutter-center {
+  position: absolute;
+  inset: 6px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 50%;
+  transition: all 0.15s ease;
+}
+
+.shutter-btn:active .shutter-ring {
+  border-color: var(--color-accent);
+}
+
+.shutter-btn:active .shutter-center {
+  inset: 8px;
+  background: var(--color-accent);
+}
+
+/* --- Shutter flash animation --- */
+@keyframes shutterFlash {
+  0% { opacity: 0.8; }
+  100% { opacity: 0; }
+}
+
+/* --- Generation Overlay --- */
+.generating-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 10, 12, 0.95);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+.generating-content {
+  text-align: center;
+  padding: 32px 24px;
+  max-width: 360px;
+  width: 100%;
+}
+
+.captured-preview {
+  width: 200px;
+  height: 150px;
+  margin: 0 auto 32px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.captured-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* Sepia effect to hint at time travel */
+  filter: sepia(0.4) brightness(0.9);
+  animation: sepiaShift 4s ease-in-out infinite alternate;
+}
+
+@keyframes sepiaShift {
+  0% { filter: sepia(0) brightness(1); }
+  100% { filter: sepia(0.6) brightness(0.85); }
+}
+
+/* Time warp rings animation */
+.time-warp-animation {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 24px;
+}
+
+.warp-ring {
+  position: absolute;
+  inset: 0;
+  border: 1.5px solid var(--color-accent);
+  border-radius: 50%;
+  opacity: 0;
+}
+
+.warp-ring.r1 {
+  animation: warpPulse 3s ease-out infinite;
+}
+
+.warp-ring.r2 {
+  animation: warpPulse 3s ease-out 1s infinite;
+}
+
+.warp-ring.r3 {
+  animation: warpPulse 3s ease-out 2s infinite;
+}
+
+@keyframes warpPulse {
+  0% {
+    transform: scale(0.4);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+}
+
+.warp-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 32px;
+  height: 32px;
+  color: var(--color-accent);
+}
+
+.generating-title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.generating-subtitle {
+  font-size: 14px;
+  color: var(--color-text-muted);
+  margin-bottom: 20px;
+}
+
+.generating-detail {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-top: 16px;
+  opacity: 0.6;
+}
+
+/* Progress bar */
+.progress-bar {
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--color-accent), var(--color-accent-light));
+  border-radius: 2px;
+  transition: width 0.8s ease;
+}
+
+/* --- AR Controls --- */
+.ar-controls-center {
+  align-self: center;
+  width: 80%;
+  max-width: 300px;
+  pointer-events: auto;
+}
+
+.time-travel-label {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.label-past, .label-present {
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+}
+
+.label-past {
+  color: var(--color-accent-light);
+}
+
+/* Custom range slider */
+.blend-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.2), var(--color-accent));
+  border-radius: 2px;
+  outline: none;
+}
+
+.blend-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  border: 3px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.api-key-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 200;
+  padding: 10px 16px;
+  padding-top: max(10px, env(safe-area-inset-top));
+  background: rgba(120, 60, 40, 0.92);
+  color: #fff;
+  font-size: 13px;
+  text-align: center;
+  cursor: pointer;
+}
+
+#hud-capture.has-api-banner .hud-top {
+  margin-top: 42px;
+}
+
+.field-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  margin-bottom: 6px;
+  margin-top: 12px;
+}
+
+.field-label:first-of-type {
+  margin-top: 0;
+}
+
+.modal-text-input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: 15px;
+  outline: none;
+}
+
+.modal-text-input:focus {
+  border-color: var(--color-accent);
+}
+
+.setup-api-input {
+  min-height: 48px;
+  resize: none;
+}
+
+.modal-card-tall {
+  max-width: 420px;
+  max-height: min(92vh, 720px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.manage-stations-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 16px 0 8px;
+  max-height: 45vh;
+  overflow-y: auto;
+}
+
+.manage-station-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.manage-station-row span {
+  font-size: 15px;
+  flex: 1;
+  text-align: left;
+}
+
+.btn-danger {
+  padding: 8px 14px;
+  background: rgba(180, 60, 50, 0.35);
+  border: 1px solid rgba(200, 80, 70, 0.6);
+  border-radius: var(--radius-sm);
+  color: #f5c4c0;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.btn-danger:active {
+  background: rgba(180, 60, 50, 0.5);
+}
+
+.manage-empty {
+  font-size: 14px;
+  color: var(--color-text-muted);
+  padding: 12px 0;
+}
+
+.quick-actions {
+  flex-wrap: wrap;
+  justify-content: center;
+  row-gap: 8px;
+}
+
+/* --- Prompt Modal --- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  padding: 24px;
+}
+
+.modal-card {
+  width: 100%;
+  max-width: 400px;
+  background: rgba(20, 18, 16, 0.95);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow-card);
+}
+
+.modal-title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.modal-description {
+  font-size: 14px;
+  color: var(--color-text-muted);
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+.prompt-textarea {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.5;
+  resize: vertical;
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.prompt-textarea:focus {
+  border-color: var(--color-accent);
+}
+
+.prompt-textarea::placeholder {
+  color: var(--color-text-muted);
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+  justify-content: flex-end;
+}
+
+.btn-secondary {
+  padding: 10px 20px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-secondary:active {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.btn-sm {
+  padding: 10px 24px;
+  font-size: 14px;
+  border-radius: var(--radius-sm);
+}
+
+/* --- iPhone safe areas --- */
+@supports (padding-top: env(safe-area-inset-top)) {
+  .hud-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  .hud-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* --- Landscape adjustments --- */
+@media (orientation: landscape) {
+  .capture-guide {
+    width: 50%;
+    max-width: 400px;
+    aspect-ratio: 16 / 9;
+  }
+  .shutter-btn {
+    width: 60px;
+    height: 60px;
+  }
+}

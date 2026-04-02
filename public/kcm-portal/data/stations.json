@@ -1,0 +1,61 @@
+{
+  "schoolhouse": {
+    "name": "Norris School",
+    "year": "1884",
+    "mode": "indoor",
+    "description": "One-room schoolhouse that served early Kern County settlers. Students of all ages shared a single classroom with wooden desks, a chalkboard, and a pot-belly stove.",
+    "defaultPrompt": "Generate a cinematic video from this exact camera angle showing this 1884 one-room schoolhouse brought to life: a female teacher in a long Victorian dress writing lessons on the chalkboard, children aged 6-14 sitting at wooden desks in period clothing (boys in suspenders and caps, girls in pinafores), a pot-belly stove glowing warmly in the corner, dust motes floating in sunbeams through the windows. Natural movement — children writing on slates, one boy passing a note. Keep the exact room structure, walls, windows, and furniture unchanged. Only add people and warm atmospheric lighting.",
+    "infoCards": [
+      {
+        "title": "The Norris School",
+        "body": "Built in 1884, this one-room schoolhouse served the children of Kern County's early settlers. Students of all ages shared a single classroom, learning reading, writing, and arithmetic from a single teacher. The bell tower called children in from surrounding farms each morning. This building was relocated to the museum grounds in 1958 to preserve a vital piece of Kern County's educational heritage.",
+        "image": "assets/images/norris-historical.jpg"
+      },
+      {
+        "title": "Daily Life",
+        "body": "A typical school day began at 8 AM and ended at 4 PM. Students brought their lunches in tin pails. Older students helped teach younger ones while the teacher managed a classroom that could hold up to 30 children across eight grade levels."
+      }
+    ]
+  },
+  "barn": {
+    "name": "Pioneer Barn",
+    "year": "1870s",
+    "mode": "indoor",
+    "description": "Agricultural barn representing the heart of early Kern County farming. Features horse stalls, hay storage, and period farming equipment.",
+    "defaultPrompt": "Generate a cinematic video from this exact camera angle showing this 1870s pioneer barn brought to life: a weathered farmer in overalls and a wide-brimmed hat tending to horses in their stalls, a woman in a calico dress carrying eggs in an apron, hay dust floating in golden light streaming through the barn slats, chickens pecking on the ground, a barn cat sleeping on a hay bale. Natural gentle movement — the farmer brushing a horse, the woman walking across the frame. Keep all barn structure, walls, stalls, and equipment exactly as they appear. Only add people, animals, and atmospheric effects.",
+    "infoCards": [
+      {
+        "title": "Pioneer Barn",
+        "body": "This barn represents the agricultural heart of early Kern County. Settlers relied on structures like these to shelter livestock and store the harvest that sustained their families through harsh Central Valley summers. The barn's construction reflects the resourcefulness of pioneers who often built using locally sourced materials.",
+        "image": "assets/images/barn-historical.jpg"
+      }
+    ]
+  },
+  "oil-derrick": {
+    "name": "Oil Derrick",
+    "year": "1899",
+    "mode": "outdoor",
+    "description": "Replica oil derrick from the Kern River Oil Field boom. At its peak, Kern River was the most productive oil field in the United States.",
+    "defaultPrompt": "Generate a cinematic video from this exact camera angle showing this 1899 oil derrick scene brought to life: oil workers in period clothing (denim, leather boots, flat caps) operating the wooden derrick, a foreman in a vest checking a clipboard, black oil glistening on equipment, steam rising from nearby pipes, a horse-drawn wagon parked nearby loaded with barrels. The sky should have a warm golden-hour quality. Natural movement — workers pulling ropes, wiping brows. Keep all structures exactly as they appear. Only add people and atmospheric effects.",
+    "infoCards": [
+      {
+        "title": "Black Gold",
+        "body": "The discovery of oil transformed Kern County from a quiet agricultural region into one of California's most productive oil fields. At its peak, the Kern River Oil Field was the most productive in the United States. This derrick represents the boom that brought thousands of workers and their families to the region.",
+        "image": "assets/images/derrick-historical.jpg"
+      }
+    ]
+  },
+  "general-store": {
+    "name": "General Store",
+    "year": "1890s",
+    "mode": "indoor",
+    "description": "A recreated frontier general store stocked with period goods — canned foods, fabric bolts, tools, medicines, and candy jars.",
+    "defaultPrompt": "Generate a cinematic video from this exact camera angle showing this 1890s general store brought to life: a shopkeeper in a white apron and sleeve garters arranging goods on shelves, a woman in a bustle dress examining fabric, a young boy pressing his face against the candy jar, golden afternoon light through dusty windows, a calico cat on the counter. Natural movement — the shopkeeper weighing something on a scale, customers browsing. Keep all shelves, goods, and fixtures exactly as they appear. Only add people and warm atmospheric lighting.",
+    "infoCards": [
+      {
+        "title": "The General Store",
+        "body": "The general store was the social and commercial hub of any frontier town. Here settlers could buy everything from flour and coffee to fabric, tools, and patent medicines. News was shared, credit extended, and community bonds formed over the counter."
+      }
+    ]
+  }
+}

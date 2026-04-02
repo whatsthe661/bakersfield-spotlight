@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="robots" content="noindex, nofollow, noarchive">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>My Captures — Portal to the Past</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/gallery.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="landing-page">
+  <script src="js/site-private-gate.js"></script>
+
+  <div class="gallery-page">
+    <div class="landing-bg"></div>
+
+    <div class="gallery-content">
+      <!-- Header -->
+      <div class="gallery-header">
+        <button class="hud-btn" onclick="window.location.href='index.html'">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+        </button>
+        <div>
+          <h1 class="gallery-title">My Captures</h1>
+          <p class="gallery-count" id="capture-count"></p>
+        </div>
+        <div style="width:44px"></div>
+      </div>
+
+      <!-- Empty state -->
+      <div id="empty-state" class="empty-state" style="display:none;">
+        <div class="empty-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
+            <circle cx="8.5" cy="8.5" r="1.5"/>
+            <polyline points="21 15 16 10 5 21"/>
+          </svg>
+        </div>
+        <p>No captures yet</p>
+        <p class="empty-hint">Go to a station and take a photo to get started</p>
+        <button class="btn-primary btn-sm" style="margin-top:16px;" onclick="window.location.href='experience.html'">
+          Start Capturing
+        </button>
+      </div>
+
+      <!-- Capture grid -->
+      <div id="captures-grid" class="captures-grid"></div>
+    </div>
+  </div>
+
+  <!-- Fullscreen video viewer -->
+  <div id="video-viewer" class="video-viewer" style="display:none;">
+    <div class="viewer-backdrop" onclick="closeViewer()"></div>
+    <div class="viewer-content">
+      <button class="viewer-close" onclick="closeViewer()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+      <video id="viewer-video" playsinline controls loop></video>
+      <div class="viewer-info">
+        <h3 id="viewer-title"></h3>
+        <p id="viewer-date"></p>
+      </div>
+      <div class="viewer-actions">
+        <button class="btn-secondary btn-sm" id="viewer-ar-btn" onclick="openInAR()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;">
+            <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/>
+          </svg>
+          View in AR
+        </button>
+        <button class="btn-secondary btn-sm" onclick="deleteCapture()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;">
+            <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+          </svg>
+          Delete
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let captures = [];
+    let selectedCapture = null;
+
+    function pageUrl(path) {
+      return new URL(path, window.location.href).href;
+    }
+
+    async function loadCaptures() {
+      try {
+        const resp = await fetch(pageUrl('api/captures'));
+        if (resp.ok) {
+          captures = await resp.json();
+          render();
+          return;
+        }
+      } catch { /* phone / static hosting */ }
+      try {
+        captures = JSON.parse(localStorage.getItem('kcm_phone_captures_v1') || '[]');
+        if (!Array.isArray(captures)) captures = [];
+      } catch {
+        captures = [];
+      }
+      render();
+    }
+
+    function render() {
+      const grid = document.getElementById('captures-grid');
+      const empty = document.getElementById('empty-state');
+      const count = document.getElementById('capture-count');
+
+      count.textContent = `${captures.length} capture${captures.length !== 1 ? 's' : ''}`;
+
+      if (captures.length === 0) {
+        empty.style.display = 'flex';
+        grid.style.display = 'none';
+        return;
+      }
+
+      empty.style.display = 'none';
+      grid.style.display = 'grid';
+      grid.innerHTML = '';
+
+      captures.forEach((cap, i) => {
+        const card = document.createElement('div');
+        card.className = 'capture-card';
+        card.onclick = () => openViewer(cap);
+
+        const statusBadge = cap.status === 'complete'
+          ? ''
+          : cap.status === 'generating'
+            ? '<span class="status-badge generating">Generating...</span>'
+            : '<span class="status-badge error">Failed</span>';
+
+        card.innerHTML = `
+          <div class="capture-thumb">
+            ${cap.videoUrl
+              ? `<video src="${cap.videoUrl}" muted playsinline preload="metadata" poster="${cap.photoUrl}"></video>`
+              : `<img src="${cap.photoUrl}" alt="">`
+            }
+            ${statusBadge}
+            ${cap.videoUrl ? '<div class="play-badge"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>' : ''}
+          </div>
+          <div class="capture-info">
+            <span class="capture-station">${cap.stationName || 'Free Capture'}</span>
+            <span class="capture-date">${formatDate(cap.createdAt)}</span>
+          </div>
+        `;
+
+        // Auto-play preview on hover/touch
+        const video = card.querySelector('video');
+        if (video) {
+          card.addEventListener('pointerenter', () => { video.currentTime = 0; video.play().catch(() => {}); });
+          card.addEventListener('pointerleave', () => { video.pause(); video.currentTime = 0; });
+        }
+
+        grid.appendChild(card);
+      });
+    }
+
+    function formatDate(iso) {
+      const d = new Date(iso);
+      const now = new Date();
+      const diff = now - d;
+      if (diff < 60000) return 'Just now';
+      if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+      if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    }
+
+    function openViewer(cap) {
+      selectedCapture = cap;
+      const viewer = document.getElementById('video-viewer');
+      const video = document.getElementById('viewer-video');
+      const title = document.getElementById('viewer-title');
+      const date = document.getElementById('viewer-date');
+      const arBtn = document.getElementById('viewer-ar-btn');
+
+      title.textContent = `${cap.stationName || 'Free Capture'}${cap.stationYear ? ' — ' + cap.stationYear : ''}`;
+      date.textContent = new Date(cap.createdAt).toLocaleString();
+
+      if (cap.videoUrl) {
+        video.src = cap.videoUrl;
+        video.poster = cap.photoUrl;
+        video.style.display = 'block';
+        video.play().catch(() => {});
+        arBtn.style.display = 'inline-flex';
+      } else {
+        video.style.display = 'none';
+        arBtn.style.display = 'none';
+      }
+
+      viewer.style.display = 'flex';
+    }
+
+    function closeViewer() {
+      const viewer = document.getElementById('video-viewer');
+      const video = document.getElementById('viewer-video');
+      video.pause();
+      video.src = '';
+      viewer.style.display = 'none';
+      selectedCapture = null;
+    }
+
+    function openInAR() {
+      if (!selectedCapture?.videoUrl) return;
+      window.location.href = `experience.html?station=${selectedCapture.stationId}&replay=${encodeURIComponent(selectedCapture.videoUrl)}`;
+    }
+
+    async function deleteCapture() {
+      if (!selectedCapture) return;
+      if (!confirm('Delete this capture?')) return;
+
+      try {
+        const resp = await fetch(pageUrl(`api/captures/${selectedCapture.id}`), { method: 'DELETE' });
+        if (resp.ok) {
+          closeViewer();
+          loadCaptures();
+          return;
+        }
+      } catch { /* try local */ }
+      try {
+        let list = JSON.parse(localStorage.getItem('kcm_phone_captures_v1') || '[]');
+        if (!Array.isArray(list)) list = [];
+        list = list.filter((c) => c.id !== selectedCapture.id);
+        localStorage.setItem('kcm_phone_captures_v1', JSON.stringify(list));
+        closeViewer();
+        loadCaptures();
+      } catch (e) {
+        alert('Delete failed: ' + e.message);
+      }
+    }
+
+    loadCaptures();
+    // Auto-refresh for generating captures
+    setInterval(() => {
+      if (captures.some(c => c.status === 'generating')) loadCaptures();
+    }, 5000);
+  </script>
+</body>
+</html>

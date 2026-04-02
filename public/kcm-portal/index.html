@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="robots" content="noindex, nofollow, noarchive">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Kern County Museum — AR Experience</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="landing-page">
+  <script src="js/site-private-gate.js"></script>
+
+  <!-- Landing / Station Router -->
+  <div id="landing" class="landing">
+    <div class="landing-bg"></div>
+
+    <div class="landing-content">
+      <div class="landing-logo">
+        <div class="logo-icon">
+          <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="8" y="20" width="48" height="36" rx="2" stroke="currentColor" stroke-width="2.5"/>
+            <path d="M8 28h48" stroke="currentColor" stroke-width="2.5"/>
+            <path d="M20 20V12a12 12 0 0 1 24 0v8" stroke="currentColor" stroke-width="2.5"/>
+            <rect x="18" y="34" width="12" height="10" rx="1" stroke="currentColor" stroke-width="2"/>
+            <rect x="34" y="34" width="12" height="10" rx="1" stroke="currentColor" stroke-width="2"/>
+            <circle cx="32" cy="24" r="2" fill="currentColor"/>
+          </svg>
+        </div>
+        <h1 class="landing-title">Kern County Museum</h1>
+        <p class="landing-subtitle">Portal to the Past</p>
+      </div>
+
+      <div class="landing-description">
+        <p>Capture any room in the museum and watch it come alive with people from the past. AI-generated video overlays create a portal into Kern County's rich history.</p>
+      </div>
+
+      <!-- Station Selection (for demo / direct access) -->
+      <div id="station-select" class="station-select">
+        <h2 class="station-select-title">Choose a Station</h2>
+        <div id="station-grid" class="station-grid">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Quick Launch Button -->
+      <div class="landing-actions">
+        <button id="btn-launch" class="btn-primary" onclick="launchAR()">
+          <span class="btn-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+              <circle cx="12" cy="13" r="4"/>
+            </svg>
+          </span>
+          Open Camera & Capture
+        </button>
+        <p class="landing-hint">Take a photo inside any exhibit to see it come alive</p>
+      </div>
+
+      <details class="phone-deploy-hint">
+        <summary>Only have your iPhone (cellular, no Wi‑Fi Mac)?</summary>
+        <p>This app must be served over <strong>HTTPS</strong> (camera requirement). Before you go: zip this folder without <code>node_modules</code>, drag it onto <a href="https://app.netlify.com/drop" target="_blank" rel="noopener">Netlify Drop</a>, note your <code>https://….netlify.app</code> link, then open that link on LTE. Your API key and custom stops then live only on the phone.</p>
+      </details>
+
+      <div class="landing-footer">
+        <p class="powered-by">Powered by <strong>What's the 661</strong></p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Check for station parameter in URL
+    const params = new URLSearchParams(window.location.search);
+    const stationParam = params.get('station');
+
+    // If station param present, go directly to AR
+    if (stationParam) {
+      window.location.href = `experience.html?station=${encodeURIComponent(stationParam)}`;
+    }
+
+    function pageUrl(path) {
+      return new URL(path, window.location.href).href;
+    }
+
+    // Load stations: museum server if present, else static JSON + phone‑saved custom stops
+    async function loadStations() {
+      let useServer = false;
+      try {
+        const ac = new AbortController();
+        setTimeout(() => ac.abort(), 2500);
+        const resp = await fetch(pageUrl('api/settings'), { signal: ac.signal });
+        useServer = resp.ok;
+      } catch (e) { useServer = false; }
+
+      let stations = {};
+      if (useServer) {
+        try {
+          const resp = await fetch(pageUrl('api/stations'));
+          if (resp.ok) stations = await resp.json();
+        } catch (e) { console.warn(e); }
+      }
+      if (Object.keys(stations).length === 0) {
+        try {
+          const resp = await fetch(pageUrl('data/stations.json'));
+          if (resp.ok) stations = await resp.json();
+        } catch (e) { console.warn(e); }
+        try {
+          Object.assign(stations, JSON.parse(localStorage.getItem('kcm_custom_stations_v1') || '{}'));
+        } catch (e) { console.warn(e); }
+      }
+      try {
+        const grid = document.getElementById('station-grid');
+
+        for (const [id, station] of Object.entries(stations)) {
+          const card = document.createElement('button');
+          card.className = 'station-card';
+          card.onclick = () => {
+            window.location.href = `experience.html?station=${id}`;
+          };
+          card.innerHTML = `
+            <div class="station-card-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M3 9h18M9 3v18"/>
+              </svg>
+            </div>
+            <div class="station-card-info">
+              <h3>${station.name}</h3>
+              <span class="station-year">${station.year}</span>
+              <span class="station-mode ${station.mode || ''}">${station.mode === 'outdoor' ? 'Outdoor' : station.mode === 'through-glass' ? 'Through Glass' : 'Indoor'}</span>
+            </div>
+          `;
+          grid.appendChild(card);
+        }
+      } catch (e) {
+        console.warn('Could not load stations:', e);
+      }
+    }
+
+    function launchAR() {
+      window.location.href = 'experience.html?station=schoolhouse';
+    }
+
+    loadStations();
+  </script>
+</body>
+</html>
