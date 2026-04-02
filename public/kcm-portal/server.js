@@ -373,7 +373,7 @@ async function generateVideo(jobId, imageData, mimeType, prompt) {
     job.progress = 10;
 
     let operation = await ai.models.generateVideos({
-      model: 'veo-3',
+      model: 'veo-3.1-generate-preview',
       prompt: prompt,
       image: {
         imageBytes: imageData,
@@ -383,7 +383,7 @@ async function generateVideo(jobId, imageData, mimeType, prompt) {
         aspectRatio: '16:9',
         numberOfVideos: 1,
         durationSeconds: 8,
-        personGeneration: 'allow_all',
+        personGeneration: 'allow_adult',
       },
     });
 

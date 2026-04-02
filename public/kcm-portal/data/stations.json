@@ -1,4 +1,17 @@
 {
+  "free-capture": {
+    "name": "Backyard / home demo",
+    "year": "Any",
+    "mode": "outdoor",
+    "description": "Use anywhere—your yard, patio, or living room. Snap a photo, type what you want to see, and the AI video overlays on your camera view with motion-parallax for a simple AR-style demo.",
+    "defaultPrompt": "Generate a cinematic video from this exact camera angle of this outdoor (or indoor) scene brought to life exactly as I describe. Keep all architecture, plants, fences, furniture, and layout unchanged—only add or animate what fits naturally. Use realistic lighting matching the photo.",
+    "infoCards": [
+      {
+        "title": "Quick backyard test",
+        "body": "Tap the pencil icon to edit the Veo prompt before you shoot—for example: “Add a vintage biplane flying overhead” or “Kids playing catch in period clothing.” After the video loads, use the blend slider to mix past and present, or portal mode for a circular window."
+      }
+    ]
+  },
   "schoolhouse": {
     "name": "Norris School",
     "year": "1884",

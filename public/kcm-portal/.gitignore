@@ -5,4 +5,6 @@ localhost-key.pem
 .env
 data/runtime-config.json
 data/uploads/*
+data/photos/*
+data/captures.json
 data/kcm-private-passphrase.json

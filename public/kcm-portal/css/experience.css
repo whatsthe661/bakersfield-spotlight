@@ -127,8 +127,10 @@
   bottom: -36px;
   left: 50%;
   transform: translateX(-50%);
-  white-space: nowrap;
+  max-width: min(92vw, 300px);
+  white-space: normal;
   font-size: 14px;
+  line-height: 1.35;
   color: rgba(255, 255, 255, 0.7);
   text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7);
   text-align: center;
@@ -309,6 +311,53 @@
   background: linear-gradient(90deg, var(--color-accent), var(--color-accent-light));
   border-radius: 2px;
   transition: width 0.8s ease;
+}
+
+#hud-ar .hud-top {
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.hud-ar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Prompt recap while AR overlay is visible */
+.ar-prompt-panel {
+  align-self: center;
+  width: 92%;
+  max-width: 360px;
+  max-height: 22vh;
+  overflow: auto;
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-md);
+  pointer-events: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ar-prompt-heading {
+  margin: 0 0 6px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-accent-light);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+
+.ar-prompt-text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
 }
 
 /* --- AR Controls --- */

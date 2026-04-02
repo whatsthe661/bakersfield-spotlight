@@ -24,6 +24,9 @@
   let blendValue = 75;
   let portalMode = false;
   let isARActive = false;
+  let currentArVideoObjectUrl = null;
+  /** Prompt text used for the video currently shown in AR (set when generation starts). */
+  let promptShownWithOverlay = '';
 
   // Motion tracking
   let baseOrientation = null;
@@ -131,21 +134,19 @@
   const veoFileInput = document.getElementById('veo-file-input');
 
   async function refreshStations() {
+    let base = {};
     if (!clientOnlyMode) {
       try {
         const resp = await fetch(apiUrl('api/stations'));
-        if (resp.ok) {
-          allStations = await resp.json();
-          return;
-        }
+        if (resp.ok) base = await resp.json();
       } catch { /* fall through */ }
     }
-
-    let base = {};
-    try {
-      const r = await fetch(apiUrl('data/stations.json'));
-      if (r.ok) base = await r.json();
-    } catch { /* */ }
+    if (Object.keys(base).length === 0) {
+      try {
+        const r = await fetch(apiUrl('data/stations.json'));
+        if (r.ok) base = await r.json();
+      } catch { /* */ }
+    }
     const custom = loadCustomStationsLocal();
     allStations = { ...base, ...custom };
   }
@@ -184,6 +185,13 @@
     customPrompt = buildDefaultPrompt();
     promptInput.value = customPrompt;
 
+    const gt = document.getElementById('guide-text');
+    if (gt) {
+      gt.textContent = stationId === 'free-capture'
+        ? 'Frame your space, tap the pencil to describe what you want, then tap the shutter'
+        : 'Frame the room and tap the shutter';
+    }
+
     refreshApiKeyBanner();
 
     await startCamera();
@@ -195,6 +203,7 @@
 
     // If replay mode, jump straight to AR
     if (replayUrl) {
+      promptShownWithOverlay = 'Replay link';
       showAROverlay(decodeURIComponent(replayUrl));
     }
   }
@@ -328,6 +337,7 @@
 
   // --- Generation API ---
   async function submitGenerationClient(imageDataUrl) {
+    promptShownWithOverlay = customPrompt;
     const token = ++clientGenToken;
     const apiKey = (localStorage.getItem(LS_API_KEY) || '').trim();
     if (!apiKey) {
@@ -351,14 +361,14 @@
       updateGeneratingUI('Sending photo to Veo…', 15);
 
       let operation = await ai.models.generateVideos({
-        model: 'veo-3',
+        model: 'veo-3.1-generate-preview',
         prompt: customPrompt,
         image: { imageBytes: imageData, mimeType },
         config: {
           aspectRatio: '16:9',
           numberOfVideos: 1,
           durationSeconds: 8,
-          personGeneration: 'allow_all',
+          personGeneration: 'allow_adult',
         },
       });
 
@@ -403,6 +413,8 @@
     if (clientOnlyMode) {
       return submitGenerationClient(imageDataUrl);
     }
+
+    promptShownWithOverlay = customPrompt;
 
     try {
       updateGeneratingUI('Sending to AI...', 5);
@@ -482,9 +494,26 @@
     if (progressFill && progress !== undefined) progressFill.style.width = progress + '%';
   }
 
+  function revokeArVideoObjectUrl() {
+    if (currentArVideoObjectUrl) {
+      try { URL.revokeObjectURL(currentArVideoObjectUrl); } catch { /* ignore */ }
+      currentArVideoObjectUrl = null;
+    }
+  }
+
   // --- AR Overlay ---
   function showAROverlay(videoUrl) {
-    arVideo.src = videoUrl;
+    revokeArVideoObjectUrl();
+    const url = videoUrl || '';
+    if (url.startsWith('blob:')) currentArVideoObjectUrl = url;
+
+    const promptEl = document.getElementById('ar-prompt-text');
+    if (promptEl) {
+      const text = promptShownWithOverlay || '';
+      promptEl.textContent = text.trim() || '(No prompt text — upload or replay)';
+    }
+
+    arVideo.src = url;
     arVideo.load();
 
     arVideo.oncanplay = () => {
@@ -504,12 +533,21 @@
 
   function exitAR() {
     isARActive = false;
+    revokeArVideoObjectUrl();
     arOverlay.style.display = 'none';
     arVideo.pause();
     arVideo.src = '';
+    arVideo.removeAttribute('src');
     hudAR.style.display = 'none';
     hudCapture.style.display = 'flex';
     currentJobId = null;
+    promptShownWithOverlay = '';
+    const promptEl = document.getElementById('ar-prompt-text');
+    if (promptEl) promptEl.textContent = '';
+  }
+
+  function removeOverlay() {
+    exitAR();
   }
 
   // --- Blend & View Modes ---
@@ -663,25 +701,23 @@
   async function deleteCustomStation(id) {
     if (!id || !confirm('Remove this stop from your walk?')) return;
     try {
-      if (clientOnlyMode) {
-        const custom = loadCustomStationsLocal();
-        if (!custom[id]) throw new Error('Not a custom stop');
+      const custom = loadCustomStationsLocal();
+      const hadLocal = Boolean(custom[id]);
+      if (hadLocal) {
         delete custom[id];
         saveCustomStationsLocal(custom);
-        await refreshStations();
-        renderManageStationsList();
-        if (stationId === id) {
-          const keys = Object.keys(allStations);
-          window.location.href = keys.length
-            ? `experience.html?station=${encodeURIComponent(keys[0])}`
-            : 'experience.html?station=free-capture';
-        }
-        return;
       }
 
-      const resp = await fetch(apiUrl(`api/stations/${encodeURIComponent(id)}`), { method: 'DELETE' });
-      const data = await resp.json().catch(() => ({}));
-      if (!resp.ok) throw new Error(data.error || resp.statusText);
+      if (!clientOnlyMode) {
+        const resp = await fetch(apiUrl(`api/stations/${encodeURIComponent(id)}`), { method: 'DELETE' });
+        if (!resp.ok && resp.status !== 404) {
+          const data = await resp.json().catch(() => ({}));
+          throw new Error(data.error || resp.statusText);
+        }
+      } else if (!hadLocal) {
+        throw new Error('Not a custom stop');
+      }
+
       await refreshStations();
       renderManageStationsList();
       if (stationId === id) {
@@ -752,6 +788,7 @@
     if (!file) return;
 
     if (clientOnlyMode) {
+      promptShownWithOverlay = 'Video from your device (no AI prompt)';
       const url = URL.createObjectURL(file);
       captureBaseOrientation();
       showAROverlay(url);
@@ -767,6 +804,7 @@
       const data = await resp.json().catch(() => ({}));
       if (!resp.ok) throw new Error(data.error || 'Upload failed');
       hideGenerating();
+      promptShownWithOverlay = 'Video uploaded from your device';
       captureBaseOrientation();
       showAROverlay(data.videoUrl);
     } catch (err) {
@@ -834,6 +872,7 @@
     showManageStations, closeManageStations, deleteCustomStation,
     showSetup, closeSetup, saveApiKey,
     pickVeoVideo,
+    removeOverlay,
   };
 
   // --- Boot ---
