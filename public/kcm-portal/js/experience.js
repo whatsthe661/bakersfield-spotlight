@@ -302,6 +302,8 @@
   }
 
   // --- Capture ---
+  let pendingImageDataUrl = null;
+
   async function capture() {
     if (!cameraStream) return;
     if (!motionEnabled) await requestMotionPermission();
@@ -314,14 +316,31 @@
     const ctx = captureCanvas.getContext('2d');
     ctx.drawImage(cameraFeed, 0, 0, captureCanvas.width, captureCanvas.height);
 
-    const imageDataUrl = captureCanvas.toDataURL('image/jpeg', 0.92);
-    captureBaseOrientation();
-
-    previewImage.src = imageDataUrl;
-    showGenerating();
+    pendingImageDataUrl = captureCanvas.toDataURL('image/jpeg', 0.92);
     animateShutter();
 
-    await submitGeneration(imageDataUrl);
+    const previewEl = document.getElementById('prompt-preview-image');
+    if (previewEl) previewEl.src = pendingImageDataUrl;
+    const previewWrap = document.querySelector('.prompt-preview-wrap');
+    if (previewWrap) previewWrap.style.display = '';
+
+    promptInput.value = customPrompt;
+    promptModal.style.display = 'flex';
+  }
+
+  function confirmPromptAndGenerate() {
+    customPrompt = promptInput.value.trim() || buildDefaultPrompt();
+    promptModal.style.display = 'none';
+
+    if (!pendingImageDataUrl) return;
+    const imageDataUrl = pendingImageDataUrl;
+    pendingImageDataUrl = null;
+
+    captureBaseOrientation();
+    previewImage.src = imageDataUrl;
+    showGenerating();
+
+    submitGeneration(imageDataUrl);
   }
 
   function animateShutter() {
@@ -826,6 +845,11 @@
   }
 
   function editPrompt() {
+    pendingImageDataUrl = null;
+    const previewEl = document.getElementById('prompt-preview-image');
+    if (previewEl) previewEl.src = '';
+    const previewWrap = document.querySelector('.prompt-preview-wrap');
+    if (previewWrap) previewWrap.style.display = 'none';
     promptInput.value = customPrompt;
     promptModal.style.display = 'flex';
   }
@@ -835,7 +859,10 @@
     promptModal.style.display = 'none';
   }
 
-  function closePromptModal() { promptModal.style.display = 'none'; }
+  function closePromptModal() {
+    pendingImageDataUrl = null;
+    promptModal.style.display = 'none';
+  }
 
   function showStationInfo() {
     if (!station) return;
@@ -865,7 +892,7 @@
 
   // --- Expose to window ---
   window.app = {
-    capture, flipCamera, editPrompt, savePrompt, closePromptModal,
+    capture, flipCamera, editPrompt, savePrompt, closePromptModal, confirmPromptAndGenerate,
     showStationInfo, closeStationInfo, exitAR, setBlend,
     togglePortalMode, toggleFullscreenMode, recapture, shareExperience,
     nextBuilding, showAddStation, closeAddStation, saveNewStation,

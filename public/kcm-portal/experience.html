@@ -171,8 +171,8 @@
 
     <div class="ar-controls-center">
       <div class="time-travel-label">
-        <span class="label-past">Past</span>
         <span class="label-present">Present</span>
+        <span class="label-past">Past</span>
       </div>
       <input type="range" id="blend-slider" class="blend-slider" min="0" max="100" value="75"
              oninput="app.setBlend(this.value)">
@@ -271,15 +271,18 @@
     </div>
   </div>
 
-  <!-- ========== PROMPT EDITOR MODAL ========== -->
+  <!-- ========== PROMPT EDITOR MODAL (shown after photo, before generation) ========== -->
   <div id="prompt-modal" class="modal-overlay" style="display:none;">
-    <div class="modal-card">
-      <h3 class="modal-title">Veo video prompt</h3>
-      <p class="modal-description">This text is sent to Gemini Veo with your photo. Edit it before each capture if you want.</p>
-      <textarea id="prompt-input" class="prompt-textarea" rows="5" placeholder="Example: 1890s general store, shopkeeper behind counter, warm afternoon light, customers in period dress…"></textarea>
+    <div class="modal-card modal-card-tall">
+      <h3 class="modal-title">Describe what you want to see</h3>
+      <p class="modal-description">This prompt is sent to Veo along with your photo. Tell it exactly what people, era, lighting, or action to add.</p>
+      <div class="prompt-preview-wrap">
+        <img id="prompt-preview-image" src="" alt="Your photo" class="prompt-preview-img">
+      </div>
+      <textarea id="prompt-input" class="prompt-textarea" rows="5" placeholder="Example: Add 1890s townspeople in period clothing walking down the street, warm golden-hour light, a horse-drawn carriage passing by…"></textarea>
       <div class="modal-actions">
         <button class="btn-secondary" onclick="app.closePromptModal()">Cancel</button>
-        <button class="btn-primary btn-sm" onclick="app.savePrompt()">Save</button>
+        <button class="btn-primary btn-sm" onclick="app.confirmPromptAndGenerate()">Generate video</button>
       </div>
     </div>
   </div>

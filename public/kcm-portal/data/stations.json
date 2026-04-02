@@ -4,7 +4,7 @@
     "year": "Any",
     "mode": "outdoor",
     "description": "Use anywhere—your yard, patio, or living room. Snap a photo, type what you want to see, and the AI video overlays on your camera view with motion-parallax for a simple AR-style demo.",
-    "defaultPrompt": "Generate a cinematic video from this exact camera angle of this outdoor (or indoor) scene brought to life exactly as I describe. Keep all architecture, plants, fences, furniture, and layout unchanged—only add or animate what fits naturally. Use realistic lighting matching the photo.",
+    "defaultPrompt": "Generate a cinematic video from this exact camera angle. Add 3-5 people in 1920s period clothing naturally walking and interacting in this space—men in flat caps and suspenders, women in long dresses. Keep all buildings, plants, fences, furniture, and layout exactly as they appear in the photo. Add warm golden-hour lighting, gentle dust motes, and subtle atmospheric haze. Only add the people and atmosphere; do not change the structures.",
     "infoCards": [
       {
         "title": "Quick backyard test",
